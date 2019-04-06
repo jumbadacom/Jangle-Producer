@@ -1,0 +1,124 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical">
+
+        <Button
+            android:id="@+id/btnInsertUsers"
+            android:layout_width="wrap_content"
+            android:layout_height="50dp"
+            android:layout_marginBottom="16dp"
+            android:onClick="addUsers"
+            android:text="Add Users"
+            android:textAllCaps="false"/>
+
+        <Button
+            android:id="@+id/btnHideAccount"
+            android:layout_width="wrap_content"
+            android:layout_height="50dp"
+            android:layout_marginBottom="16dp"
+            android:onClick="hideAccount"
+            android:text="Hide Account(s)"
+            android:textAllCaps="false"/>
+
+        <Button
+            android:id="@+id/btnFollowRequest"
+            android:layout_width="wrap_content"
+            android:layout_height="50dp"
+            android:layout_marginBottom="16dp"
+            android:onClick="addFollowRequest"
+            android:text="Follow Request"
+            android:textAllCaps="false"/>
+
+        <Button
+            android:id="@+id/btnJangle"
+            android:layout_width="wrap_content"
+            android:layout_height="50dp"
+            android:layout_marginBottom="16dp"
+            android:onClick="addJangle"
+            android:text="Add Jangle"
+            android:textAllCaps="false"/>
+
+        <Button
+            android:id="@+id/btnCompletion"
+            android:layout_width="wrap_content"
+            android:layout_height="50dp"
+            android:layout_marginBottom="16dp"
+            android:onClick="addCompletion"
+            android:text="Add Completion"
+            android:textAllCaps="false"/>
+
+        <Button
+            android:id="@+id/btnVoteAllOthers"
+            android:layout_width="wrap_content"
+            android:layout_height="50dp"
+            android:layout_marginBottom="16dp"
+            android:onClick="voteAllOthers"
+            android:text="Vote All Users"
+            android:textAllCaps="false"/>
+
+
+        <Button
+            android:id="@+id/btnUpdateUsername"
+            android:layout_width="wrap_content"
+            android:layout_height="50dp"
+            android:layout_marginBottom="16dp"
+            android:onClick="updateProfileName"
+            android:text="Update User(s) Name"
+            android:textAllCaps="false"/>
+
+        <Button
+            android:id="@+id/btnProfileImage"
+            android:layout_width="wrap_content"
+            android:layout_height="50dp"
+            android:layout_marginBottom="16dp"
+            android:onClick="uploadProfileImage"
+            android:text="Upload Profile Image"
+            android:textAllCaps="false"/>
+
+        <Button
+            android:id="@+id/btnJangleAndComp"
+            android:layout_width="wrap_content"
+            android:layout_height="50dp"
+            android:layout_marginBottom="16dp"
+            android:onClick="uploadJangleAndComp"
+            android:text="Upload Jangle 2Comps"
+            android:textAllCaps="false"/>
+
+        <Button
+            android:id="@+id/btnDelJangle"
+            android:layout_width="wrap_content"
+            android:layout_height="50dp"
+            android:layout_marginBottom="16dp"
+            android:onClick="deleteJangle"
+            android:text="Delete Jangle"
+            android:textAllCaps="false"/>
+
+        <Button
+            android:id="@+id/btnSendCompLastJangle"
+            android:layout_width="wrap_content"
+            android:layout_height="50dp"
+            android:layout_marginBottom="16dp"
+            android:onClick="sendCompLastJangle"
+            android:text="Send Completion Last Jangle"
+            android:textAllCaps="false"/>
+
+
+        <Button
+            android:id="@+id/btnSendCompGivenJangleWithUsers"
+            android:layout_width="wrap_content"
+            android:layout_height="50dp"
+            android:layout_marginBottom="16dp"
+            android:onClick="sendCompGivenJangle"
+            android:text="Send Completion Given Jangle With Users"
+            android:textAllCaps="false"/>
+    </LinearLayout>
+
+
+</ScrollView>
