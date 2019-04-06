@@ -28,6 +28,7 @@ import com.test.jangleproducer.model.result.UploadResponse;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -155,13 +156,13 @@ public class MainActivity extends AppCompatActivity implements Handler.Callback 
     public void voteAllOthers(View view) {
         DebugLog.write();
         //votingOtherUser();
-         votingFollowingUser();
+        votingFollowingUser();
     }
 
     public void updateProfileName(View view) {
         DebugLog.write();
         UpdateUserProfile updateUserProfile = new UpdateUserProfile(mService, mAppExecutors);
-        updateUserProfile.updateProfileName(1000,"testuser");
+        updateUserProfile.updateProfileName(1000, "testuser");
     }
 
 
@@ -181,9 +182,9 @@ public class MainActivity extends AppCompatActivity implements Handler.Callback 
         sendCompletionsToLastJangle(50);
     }
 
-    public void sendCompGivenJangle(View view){
-
-      //  sendCompletionGivenJangleWithUser(String jangleUuid,List<String> completenioners);
+    public void sendCompLastJangleGivenUsers(View view) {
+        String[] userArray = {"testuser2", "testuser3", "testuser1003", "testuser1004"};
+        sendCompletionGivenJangleWithUser( new ArrayList<String>(Arrays.asList(userArray)), 5);
     }
     //endregion
 
@@ -316,6 +317,9 @@ public class MainActivity extends AppCompatActivity implements Handler.Callback 
                 if (subject == MessageSubject.UPLOAD_COMPLETIONS_TO_LAST_JANGLE) {
                     DebugLog.write();
                     mHandleJangle.getLastJangle(tokenList, completionCount, subject);
+                } else if (subject == MessageSubject.UPLOAD_COMPLETIONS_TO_LAST_JANGLE_WITH_USERS) {
+                String jangleUuid= bundle.getString(JANGLE_KEY);
+
                 }
                 break;
             }
@@ -429,9 +433,10 @@ public class MainActivity extends AppCompatActivity implements Handler.Callback 
                 MessageSubject.UPLOAD_COMPLETIONS_TO_LAST_JANGLE);
     }
 
-    public void sendCompletionGivenJangleWithUser(String jangleUuid,List<String> completenioners){
-
-
+    public void sendCompletionGivenJangleWithUser( ArrayList<String> completenioners, int completionCount) {
+        DebugLog.write();
+        mUserToken.getTokenList(completenioners, completionCount,
+                MessageSubject.UPLOAD_COMPLETIONS_TO_LAST_JANGLE_WITH_USERS);
     }
 
     private void sendCompletion() {/*

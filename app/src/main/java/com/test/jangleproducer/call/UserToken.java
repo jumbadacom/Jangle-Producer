@@ -1,7 +1,6 @@
 package com.test.jangleproducer.call;
 
 
-
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Message;
@@ -22,6 +21,7 @@ import retrofit2.Call;
 import retrofit2.Response;
 
 import static com.test.jangleproducer.MainActivity.COMPLETION_COUNT_KEY;
+import static com.test.jangleproducer.MainActivity.JANGLE_KEY;
 import static com.test.jangleproducer.MainActivity.MSG_DOUBLE_TOKEN_READY;
 import static com.test.jangleproducer.MainActivity.MSG_TOKEN_READY;
 import static com.test.jangleproducer.MainActivity.MESSAGE_SUBJECT_KEY;
@@ -30,9 +30,6 @@ import static com.test.jangleproducer.MainActivity.USER_TOKEN_KEY2;
 import static com.test.jangleproducer.MainActivity.USER_TOKEN_LIST_KEY;
 
 public class UserToken {
-
-
-
 
 
     private Handler.Callback callback;
@@ -106,7 +103,7 @@ public class UserToken {
 
     }
 
-    public void getTokenList(int userId, final String userBaseName, final int limit, int completionCount,final MessageSubject messageSubject) {
+    public void getTokenList(int userId, final String userBaseName, final int limit, int completionCount, final MessageSubject messageSubject) {
 
         if (userId < limit) {
             mAppExecutors.networkIO().execute(() -> {
@@ -115,7 +112,7 @@ public class UserToken {
                     Response<AuthResponse> response = call.execute();
                     if (response.isSuccessful() && response.body() != null && response.body().getToken() != null) {
                         mTokenList.add(response.body().getToken());
-                        getTokenList(userId + 1, userBaseName, limit,completionCount, messageSubject);
+                        getTokenList(userId + 1, userBaseName, limit, completionCount, messageSubject);
                     }
                 } catch (IOException e) {
                     DebugLog.write(e.getMessage());
@@ -134,16 +131,18 @@ public class UserToken {
     }
 
 
-    public void getTokenList(final List<String> userNames,  int completionCount, final MessageSubject messageSubject) {
+    public void getTokenList(final ArrayList<String> userNames,  int completionCount, final MessageSubject messageSubject) {
 
-        if (userNames.size()>0) {
+        if (userNames.size() > 0) {
             mAppExecutors.networkIO().execute(() -> {
                 Call<AuthResponse> call = mTestService.authenticate(new AuthModel(userNames.get(0), userNames.get(0)));
                 try {
                     Response<AuthResponse> response = call.execute();
                     if (response.isSuccessful() && response.body() != null && response.body().getToken() != null) {
+                        userNames.remove(0);
+                        userNames.trimToSize();
                         mTokenList.add(response.body().getToken());
-                     //   getTokenList(userId + 1, userBaseName, limit,completionCount, messageSubject);
+                           getTokenList( userNames,   completionCount, messageSubject);
                     }
                 } catch (IOException e) {
                     DebugLog.write(e.getMessage());

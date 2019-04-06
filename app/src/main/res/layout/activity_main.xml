@@ -111,12 +111,12 @@
 
 
         <Button
-            android:id="@+id/btnSendCompGivenJangleWithUsers"
+            android:id="@+id/btnSendCompLastJangleWithGivenUsers"
             android:layout_width="wrap_content"
             android:layout_height="50dp"
             android:layout_marginBottom="16dp"
-            android:onClick="sendCompGivenJangle"
-            android:text="Send Completion Given Jangle With Users"
+            android:onClick="sendCompLastJangleGivenUsers"
+            android:text="Send Completion Last Jangle With Users"
             android:textAllCaps="false"/>
     </LinearLayout>
 
