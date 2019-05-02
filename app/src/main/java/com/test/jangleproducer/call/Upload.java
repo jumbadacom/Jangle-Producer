@@ -1,13 +1,17 @@
 package com.test.jangleproducer.call;
 
+import android.graphics.Bitmap;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Message;
 
 import com.google.gson.Gson;
 import com.test.jangleproducer.AppExecutors;
+import com.test.jangleproducer.AssetBitmapGenerator;
+import com.test.jangleproducer.BitmapImageType;
 import com.test.jangleproducer.Constants;
 import com.test.jangleproducer.DebugLog;
+import com.test.jangleproducer.FileConverter;
 import com.test.jangleproducer.MessageSubject;
 import com.test.jangleproducer.RandomWordGenerator;
 import com.test.jangleproducer.TestService;
@@ -20,7 +24,6 @@ import com.test.jangleproducer.model.result.UploadResponse;
 import java.io.File;
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.Random;
 
@@ -30,14 +33,11 @@ import okhttp3.RequestBody;
 import retrofit2.Call;
 import retrofit2.Response;
 
-import static com.test.jangleproducer.Constants.USER_LIMIT;
 import static com.test.jangleproducer.activity.MainActivity.JANGLE_KEY;
 import static com.test.jangleproducer.activity.MainActivity.JANGLE_OWNER_KEY;
+import static com.test.jangleproducer.activity.MainActivity.KEY_HAS_COMPLETIONS;
 import static com.test.jangleproducer.activity.MainActivity.MESSAGE_SUBJECT_KEY;
-import static com.test.jangleproducer.activity.MainActivity.MSG_JANGLE_AND_COMPLETIONS_FILES_READY;
 import static com.test.jangleproducer.activity.MainActivity.USER_TOKEN_LIST_KEY;
-import static com.test.jangleproducer.activity.ScreenTwoActivity.PROCESS_1_CONTINUE;
-import static com.test.jangleproducer.activity.ScreenTwoActivity.PROCESS_1_CONTINUE_TIMES;
 import static okhttp3.MediaType.parse;
 
 public class Upload {
@@ -49,12 +49,14 @@ public class Upload {
     private RandomWordGenerator mRandomWordGenerator;
     private Random mRandom;
 
-    public Upload(TestService testService, AppExecutors appExecutors, Gson gson, RandomWordGenerator randomWordGenerator, Random random,
+    public Upload(TestService testService, AppExecutors appExecutors, Gson gson, RandomWordGenerator randomWordGenerator,
+                  Random random,
                   AppCompatActivity activity) {
         mAppExecutor = appExecutors;
         mGson = gson;
         mService = testService;
         mRandomWordGenerator = randomWordGenerator;
+
         mRandom = random;
         if (activity instanceof MainActivity) {
             this.callback = (MainActivity) activity;
@@ -63,6 +65,118 @@ public class Upload {
         } else {
             throw new IllegalArgumentException("Wrong Upload Activity");
         }
+    }
+
+    public void uploadJangleWithFile(boolean hasCompletion, int completionCount,File[] files, ArrayList<String> tokenList) {
+        //get random user to upload a jangle
+        int tokenListIndex = tokenList.size() - 1;
+        int userIndex = mRandom.nextInt(tokenListIndex);
+        String jangleOwnerToken = tokenList.remove(userIndex);
+        tokenList.trimToSize();
+        //get jangle file
+        //prepare jangle model
+        UploadVM model = new UploadVM(mRandomWordGenerator.getWord(), DocType.JANGLE);
+        RequestBody modelBody = RequestBody.create(parse("application/json"), mGson.toJson(model));
+        MultipartBody.Part fileImage = MultipartBody.Part
+                .createFormData("file", "bg.jpg", RequestBody.create(parse("multipart/form-data"), files[0]));
+        MultipartBody.Part imageUrl = MultipartBody.Part
+                .createFormData("preview", "bg.jpg", RequestBody.create(parse("multipart/form-data"), files[0]));
+        MultipartBody.Part fileThumbnail = MultipartBody.Part
+                .createFormData("thumbnail", "sml.jpg", RequestBody.create(parse("multipart/form-data"), files[1]));
+        mAppExecutor.networkIO().execute(() -> {
+            Map<String, String> authMap = new HashMap<>();
+            authMap.put(Constants.AUTHORIZATION, Constants.BEARER + jangleOwnerToken);
+            Call<UploadResponse> callJangle = mService.uploadJangle(modelBody, fileImage, imageUrl, fileThumbnail, authMap);
+            try {
+                Response<UploadResponse> response = callJangle.execute();
+                if (response.code() == 200) {
+                    mAppExecutor.mainThread().execute(() -> {
+                        DebugLog.write();
+                        Message message = new Message();
+                        Bundle bundle = new Bundle();
+                        bundle.putBoolean(KEY_HAS_COMPLETIONS, hasCompletion);
+                        bundle.putString(JANGLE_KEY, response.body().getUuid());
+                        bundle.putString(JANGLE_OWNER_KEY, jangleOwnerToken);
+                        bundle.putStringArrayList(USER_TOKEN_LIST_KEY, tokenList);
+                        message.what = MainActivity.MSG_UPLOAD_JANGLE_READY;
+                        message.arg2=completionCount;
+                        message.setData(bundle);
+                        callback.handleMessage(message);
+                    });
+
+                }
+            } catch (Exception e) {
+                DebugLog.write();
+            }
+
+        });
+
+    }
+
+    public void uploadCompletionWithFile(int counter, int completionCount, File[] files, String jangleOwnerToken, String jangleUuid,
+                                             ArrayList<String> compTokenList,
+                                             MessageSubject subject) {
+
+        while (completionCount > 0) {
+            int tokenListIndex = compTokenList.size() - 1;
+            int userIndex = mRandom.nextInt(tokenListIndex);
+            String compOwnerToken = compTokenList.get(userIndex);
+            //prepare jangle model
+            UploadVM uploadModel = new UploadVM(mRandomWordGenerator.getWord(), DocType.COMPLETION, jangleUuid, counter);
+            RequestBody modelBody = RequestBody.create(parse("application/json"), mGson.toJson(uploadModel));
+            MultipartBody.Part fileImage = MultipartBody.Part
+                    .createFormData("file", counter + "_bg.jpg", RequestBody.create(parse("multipart/form-data"), files[0]));
+            MultipartBody.Part imageUrl = MultipartBody.Part
+                    .createFormData("preview", counter + "_bg.jpg", RequestBody.create(parse("multipart/form-data"), files[0]));
+            MultipartBody.Part fileThumbnail = MultipartBody.Part
+                    .createFormData("thumbnail", counter + "_sml.jpg", RequestBody.create(parse("multipart/form-data"), files[1]));
+            mAppExecutor.networkIO().execute(() -> {
+
+                Map<String, String> authMapComp = new HashMap<>();
+                authMapComp.put(Constants.AUTHORIZATION, Constants.BEARER + compOwnerToken);
+                Call<UploadResponse> call2 = mService.uploadJangle(modelBody, fileImage, imageUrl, fileThumbnail,
+                        authMapComp);
+                try {
+                    Response<UploadResponse> response = call2.execute();
+                    if (response.code() == 200) {
+                        mAppExecutor.mainThread().execute(() -> {
+                            DebugLog.write();
+                            Message message = new Message();
+                            Bundle bundle = new Bundle();
+                            bundle.putString(JANGLE_KEY, jangleUuid);
+                            bundle.putString(JANGLE_OWNER_KEY, jangleOwnerToken);
+                            bundle.putStringArrayList(USER_TOKEN_LIST_KEY, compTokenList);
+                            bundle.putSerializable(MESSAGE_SUBJECT_KEY, subject);
+                            message.what = MainActivity.MSG_UPLOAD_COMPLETION_READY;
+                            message.arg1=counter;
+                            message.arg2=completionCount;
+                            message.setData(bundle);
+                            callback.handleMessage(message);
+                        });
+
+                    }
+                } catch (Exception e) {
+                    DebugLog.write();
+                }
+            });
+
+
+        }
+        //completions are completed
+        mAppExecutor.mainThread().execute(() -> {
+            DebugLog.write();
+            Message message = new Message();
+            Bundle bundle = new Bundle();
+            bundle.putString(JANGLE_KEY, jangleUuid);
+            bundle.putString(JANGLE_OWNER_KEY, jangleOwnerToken);
+            bundle.putStringArrayList(USER_TOKEN_LIST_KEY, compTokenList);
+            bundle.putSerializable(MESSAGE_SUBJECT_KEY, subject);
+            message.what = MainActivity.MSG_JANGLE_AND_COMPLETIONS_FILES_READY;
+            message.setData(bundle);
+            callback.handleMessage(message);
+        });
+
+
     }
 
 
@@ -92,7 +206,7 @@ public class Upload {
             try {
                 Response<UploadResponse> response = callJangle.execute();
                 if (response.code() == 200) {
-                    uploadCompletions(counter + 1,  jangleOwnerToken, response.body().getUuid(), fileList, tokenList, subject);
+                    uploadCompletions(counter + 1, jangleOwnerToken, response.body().getUuid(), fileList, tokenList, subject);
                 }
             } catch (Exception e) {
                 DebugLog.write();
@@ -100,7 +214,8 @@ public class Upload {
         });
     }
 
-    private void uploadCompletions(int counter,  String jangleOwnerToken, String jangleUuid, ArrayList<File[]> fileList,
+
+    private void uploadCompletions(int counter, String jangleOwnerToken, String jangleUuid, ArrayList<File[]> fileList,
                                    ArrayList<String> compTokenList,
                                    MessageSubject subject) {
 
@@ -127,7 +242,7 @@ public class Upload {
                 try {
                     Response<UploadResponse> response = call2.execute();
                     if (response.code() == 200) {
-                        uploadCompletions(counter + 1,  jangleOwnerToken, jangleUuid, fileList, compTokenList, subject);
+                        uploadCompletions(counter + 1, jangleOwnerToken, jangleUuid, fileList, compTokenList, subject);
                     }
                 } catch (Exception e) {
                     DebugLog.write();
@@ -136,17 +251,16 @@ public class Upload {
 
         } else {//completions are completed
 
-                DebugLog.write();
-                Message message = new Message();
-                Bundle bundle = new Bundle();
-                bundle.putString(JANGLE_KEY, jangleUuid);
-                bundle.putString(JANGLE_OWNER_KEY, jangleOwnerToken);
-                bundle.putStringArrayList(USER_TOKEN_LIST_KEY, compTokenList);
-                bundle.putSerializable(MESSAGE_SUBJECT_KEY, subject);
-                message.what = MainActivity.MSG_JANGLE_AND_COMPLETIONS_FILES_READY;
-                message.setData(bundle);
-                callback.handleMessage(message);
-
+            DebugLog.write();
+            Message message = new Message();
+            Bundle bundle = new Bundle();
+            bundle.putString(JANGLE_KEY, jangleUuid);
+            bundle.putString(JANGLE_OWNER_KEY, jangleOwnerToken);
+            bundle.putStringArrayList(USER_TOKEN_LIST_KEY, compTokenList);
+            bundle.putSerializable(MESSAGE_SUBJECT_KEY, subject);
+            message.what = MainActivity.MSG_JANGLE_AND_COMPLETIONS_FILES_READY;
+            message.setData(bundle);
+            callback.handleMessage(message);
 
 
         }

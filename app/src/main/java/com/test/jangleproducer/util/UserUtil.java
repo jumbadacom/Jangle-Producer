@@ -9,6 +9,16 @@ import androidx.annotation.NonNull;
 
 public class UserUtil {
 
+    public static String getUsername(String baseName) {
+        return baseName;
+    }
+    public static String getUsername(String baseName, int suffix) {
+        return baseName + suffix;
+    }
+    public static String getPassword(String password) {
+        return password;
+    }
+
     public static ArrayList<String> getUsernameList(String baseName, int min, int max) {
         ArrayList<String> names = new ArrayList<>();
         for (int i = min; i <= max; i++) {
@@ -32,7 +42,7 @@ public class UserUtil {
             String token = tempList.remove(random.nextInt(ind));
             returnList.add(token);
         }
-        DebugLog.write("TempList size= "+tempList.size());
+        DebugLog.write("TempList size= " + tempList.size());
         DebugLog.write(returnList.size());
         return returnList;
     }

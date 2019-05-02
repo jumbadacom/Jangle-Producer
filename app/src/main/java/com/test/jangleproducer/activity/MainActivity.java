@@ -56,6 +56,9 @@ import retrofit2.Response;
 
 public class MainActivity extends AppCompatActivity implements Handler.Callback {
 
+    //bitmap
+    public static final int MSG_BITMAP_IMAGE_READY =7000;
+    public static final int MSG_BITMAP_FILE_READY=7001;
 
     //files
     public static final int MSG_JANGLE_AND_COMPLETIONS_FILES_READY = 1110;
@@ -70,10 +73,12 @@ public class MainActivity extends AppCompatActivity implements Handler.Callback 
     public static final int MSG_VOTE_NEXT_COMPLETION = 1304;
 
     //handle jangle
-    public static final int MSG_DEL_JANGLE_COMPLETED = 1401;
-    public static final int MSG_DEL_NEXT_JANGLE = 1402;
-    public static final int MSG_LAST_JANGLE = 1403;
-    public static final int MSG_LIKED_JANGLE = 1404;
+    public static final int MSG_DEL_JANGLE_COMPLETED = 2601;
+    public static final int MSG_DEL_NEXT_JANGLE = 2602;
+    public static final int MSG_LAST_JANGLE = 2603;
+    public static final int MSG_LIKED_JANGLE = 2604;
+    public static final int MSG_UPLOAD_JANGLE_READY = 2605;
+    public static final int MSG_UPLOAD_COMPLETION_READY = 2606;
 
     //tokens
     public static final int MSG_TOKEN_LIST_READY = 1200;
@@ -91,6 +96,12 @@ public class MainActivity extends AppCompatActivity implements Handler.Callback 
     public static final String JANGLE_OWNER_KEY = "com.test.jangle_producer_jangle_owner";
     public static final String COMPLETION_COUNT_KEY = "com.test.jangle_producer_completion_count";
     public static final String FILE_LIST_KEY = "com.test.jangle_producer_file_list";
+    public static final String KEY_BIG_BITMAP = "com.test.jangle_producer_big_bitmap";
+    public static final String KEY_SMALL_BITMAP = "com.test.jangle_producer_small_bitmap";
+    public static final String KEY_BIG_FILE = "com.test.jangle_producer_big_file";
+    public static final String KEY_SMALL_FILE = "com.test.jangle_producer_small_file";
+    public static final String KEY_DOC_TYPE = "com.test.jangle_producer_doc_type";
+    public static final String KEY_HAS_COMPLETIONS ="com.test.jangle_producer_jangle_has_completions";
 
 
     private TestService mService;
@@ -122,7 +133,7 @@ public class MainActivity extends AppCompatActivity implements Handler.Callback 
         setContentView(R.layout.activity_main);
         mService = NetworkConnection.get(islogHttp);
         mAppExecutors = new AppExecutors();
-        mAssetBitmapGenerator = new AssetBitmapGenerator(this);
+        mAssetBitmapGenerator = new AssetBitmapGenerator(this,mAppExecutors);
         mFileConverter = new FileConverter(mAppExecutors, this);
         mRandomColorGenerator = new RandomColorGenerator();
         mRandomWordGenerator = new RandomWordGenerator();

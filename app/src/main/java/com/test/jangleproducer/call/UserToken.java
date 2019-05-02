@@ -103,7 +103,6 @@ public class UserToken {
                         msg.what = MSG_DOUBLE_TOKEN_READY;
                         callback.handleMessage(msg);
                     }
-
                 }
             } catch (IOException e) {
                 DebugLog.write(e.getMessage());
@@ -182,6 +181,38 @@ public class UserToken {
                         userNames.trimToSize();
                         mTokenList.add(response.body().getToken());
                         getTokenList( userNames,    messageSubject,what);
+                    }
+                } catch (IOException e) {
+                    DebugLog.write(e.getMessage());
+                }
+            });
+        } else {
+            Message msg = Message.obtain();
+            Bundle bundle = new Bundle();
+            bundle.putStringArrayList(USER_TOKEN_LIST_KEY, mTokenList);
+            bundle.putSerializable(MESSAGE_SUBJECT_KEY, messageSubject);
+            msg.what = what;
+            msg.setData(bundle);
+            callback.handleMessage(msg);
+        }
+    }
+
+    public void getTokenList(final ArrayList<String> userNames, final ArrayList<String> passwords,final MessageSubject messageSubject, int what) {
+
+        if (userNames.size() > 0) {
+            mAppExecutors.networkIO().execute(() -> {
+                Call<AuthResponse> call = mTestService.authenticate(new AuthModel( passwords.get(0),userNames.get(0)));
+                try {
+                    DebugLog.write("TOKEN FOR= " +passwords.get(0)+" - "+userNames.get(0));
+                    DebugLog.write("isSuccessful networkIO: " + Thread.currentThread().getName());
+                    Response<AuthResponse> response = call.execute();
+                    if (response.isSuccessful() && response.body() != null && response.body().getToken() != null) {
+                        userNames.remove(0);
+                        passwords.remove(0);
+                        userNames.trimToSize();
+                        passwords.trimToSize();
+                        mTokenList.add(response.body().getToken());
+                        getTokenList( userNames,passwords,messageSubject,what);
                     }
                 } catch (IOException e) {
                     DebugLog.write(e.getMessage());
