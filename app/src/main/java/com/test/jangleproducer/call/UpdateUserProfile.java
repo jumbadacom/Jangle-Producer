@@ -54,12 +54,13 @@ public class UpdateUserProfile {
     }
 
     public void updateProfileName(int userSuf, String userBaseInfo) {
-        if (userSuf < 1200) {
+        if (userSuf < 100) {
             mAppExecutors.networkIO().execute(() -> {
                 Call<AuthResponse> call = mTestService.authenticate(new AuthModel(userBaseInfo + userSuf, userBaseInfo + userSuf));
                 try {
                     Response<AuthResponse> response = call.execute();
                     if (response.isSuccessful()) {
+                        DebugLog.write("isSuccessful : " + Thread.currentThread().getName());
                         Map<String, String> authMap = new HashMap<>();
                         authMap.put(Constants.AUTHORIZATION, Constants.BEARER + response.body().getToken());
                         String login = userBaseInfo + userSuf;

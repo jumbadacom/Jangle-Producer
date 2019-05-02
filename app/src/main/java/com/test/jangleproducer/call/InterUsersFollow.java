@@ -6,7 +6,7 @@ import com.test.jangleproducer.DebugLog;
 import com.test.jangleproducer.TestService;
 import com.test.jangleproducer.Uuid;
 import com.test.jangleproducer.model.dispatch.AuthModel;
-import com.test.jangleproducer.model.dispatch.UserModel;
+import com.test.jangleproducer.model.dispatch.UuidModel;
 import com.test.jangleproducer.model.result.AuthResponse;
 import com.test.jangleproducer.model.result.UUID;
 
@@ -38,10 +38,10 @@ public class InterUsersFollow {
             Call<AuthResponse> call = mTestService.authenticate(new AuthModel("testuser" + userSuffix, "testuser" + userSuffix));
             try {
                 Response<AuthResponse> response = call.execute();
-                if (response.body() != null && response.body().getToken() != null && userSuffix < 301) {
+                if (response.body() != null && response.body().getToken() != null && userSuffix < 101) {
                     Map<String, String> authMap = new HashMap<>();
                     authMap.put(Constants.AUTHORIZATION, Constants.BEARER + response.body().getToken());
-                    Call<Void> call2 = mTestService.sendFollowRequest(new UserModel(Uuid.TESTUSER32), authMap);
+                    Call<Void> call2 = mTestService.sendFollowRequest(new UuidModel(Uuid.TESTUSER1), authMap);
                     Response<Void> response2 = call2.execute();
                     DebugLog.write(response2.code());
                     if (response2.code() == 201) {
@@ -57,19 +57,21 @@ public class InterUsersFollow {
 
 
     public void runInterUserFollow() {
-
-        getTokenList(301);
+        DebugLog.write("runInterUserFollow : " + Thread.currentThread().getName());
+        getTokenList(11);
     }
 
-    private void getTokenList(final int userId) {
-        if (userId < 338) {
+    private void getTokenList(final int startUserId) {
+        DebugLog.write("getTokenList : " + Thread.currentThread().getName());
+        if (startUserId < 51) {
             mAppExecutors.networkIO().execute(() -> {
-                Call<AuthResponse> call = mTestService.authenticate(new AuthModel("testuser" + userId, "testuser" + userId));
+                Call<AuthResponse> call = mTestService.authenticate(new AuthModel("testuser" + startUserId, "testuser" + startUserId));
                 try {
+                    DebugLog.write("getTokenList networkIO() : " + Thread.currentThread().getName());
                     Response<AuthResponse> response = call.execute();
                     if (response.isSuccessful() && response.body() != null && response.body().getToken() != null) {
                         mTokenList.add(response.body().getToken());
-                        getTokenList(userId + 1);
+                        getTokenList(startUserId + 1);
                     }
                 } catch (IOException e) {
                     DebugLog.write(e.getMessage());
@@ -81,8 +83,10 @@ public class InterUsersFollow {
     }
 
     private void getUUIDList(final int start) {
-        if (start < 38) {
+        DebugLog.write("getUUIDList : " + Thread.currentThread().getName());
+        if (start < 21) {
             mAppExecutors.networkIO().execute(() -> {
+                DebugLog.write("getUUIDList networkIO : " + Thread.currentThread().getName());
                 Map<String, String> authMap = new HashMap<>();
                 authMap.put(Constants.AUTHORIZATION, Constants.BEARER + mTokenList.get(start - 1));
                 Call<UUID> call = mTestService.getUUIDs(authMap);
@@ -103,9 +107,9 @@ public class InterUsersFollow {
     }
 
     private void userFollowOthers(int uuidUserIndex) {
-
+                DebugLog.write("userFollowOthers : " + Thread.currentThread().getName());
         if (mTokenUserIndex < mTokenList.size() && uuidUserIndex < mUUIDList.size()) {
-            DebugLog.write();
+                DebugLog.write();
             if (mTokenUserIndex == uuidUserIndex) {
                 DebugLog.write();
                 userFollowOthers(++uuidUserIndex);
@@ -114,7 +118,7 @@ public class InterUsersFollow {
                 String token = mTokenList.get(mTokenUserIndex);
                 Map<String, String> authMap = new HashMap<>();
                 authMap.put(Constants.AUTHORIZATION, Constants.BEARER + token);
-                Call<Void> call = mTestService.sendFollowRequest(new UserModel(mUUIDList.get(uuidUserIndex)), authMap);
+                Call<Void> call = mTestService.sendFollowRequest(new UuidModel(mUUIDList.get(uuidUserIndex)), authMap);
                 try {
                     Response<Void> response = call.execute();
                     DebugLog.write(response.code());

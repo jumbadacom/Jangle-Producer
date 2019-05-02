@@ -1,12 +1,15 @@
-package com.test.jangleproducer;
+package com.test.jangleproducer.activity;
 
 import static com.test.jangleproducer.Constants.USER_LIMIT;
 import static com.test.jangleproducer.Constants.USERNAME_SUFFIX;
 import static okhttp3.MediaType.parse;
 
+import android.content.Intent;
 import android.graphics.Bitmap;
 import android.os.Bundle;
 import android.os.Handler;
+import android.os.HandlerThread;
+import android.os.Looper;
 import android.os.Message;
 import android.view.View;
 
@@ -14,6 +17,19 @@ import androidx.appcompat.app.AppCompatActivity;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
+import com.test.jangleproducer.AppExecutors;
+import com.test.jangleproducer.AssetBitmapGenerator;
+import com.test.jangleproducer.BitmapImageType;
+import com.test.jangleproducer.Constants;
+import com.test.jangleproducer.DebugLog;
+import com.test.jangleproducer.FileConverter;
+import com.test.jangleproducer.MessageSubject;
+import com.test.jangleproducer.NetworkConnection;
+import com.test.jangleproducer.R;
+import com.test.jangleproducer.RandomBitmapGenerator;
+import com.test.jangleproducer.RandomColorGenerator;
+import com.test.jangleproducer.RandomWordGenerator;
+import com.test.jangleproducer.TestService;
 import com.test.jangleproducer.call.HandleJangle;
 import com.test.jangleproducer.call.InterUsersFollow;
 import com.test.jangleproducer.call.UpdateUserProfile;
@@ -30,7 +46,6 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.Random;
 
@@ -41,8 +56,9 @@ import retrofit2.Response;
 
 public class MainActivity extends AppCompatActivity implements Handler.Callback {
 
+
     //files
-    static final int MSG_JANGLE_AND_COMPLETIONS_FILES_READY = 1110;
+    public static final int MSG_JANGLE_AND_COMPLETIONS_FILES_READY = 1110;
     private static final int MSG_JANGLE_FILES_READY = 1111;
     private static final int MSG_COMPLETION_FILES_READY = 1112;
     public static final int MSG_UPLOAD_IMAGE_FILES_READY = 1114;
@@ -57,6 +73,7 @@ public class MainActivity extends AppCompatActivity implements Handler.Callback 
     public static final int MSG_DEL_JANGLE_COMPLETED = 1401;
     public static final int MSG_DEL_NEXT_JANGLE = 1402;
     public static final int MSG_LAST_JANGLE = 1403;
+    public static final int MSG_LIKED_JANGLE = 1404;
 
     //tokens
     public static final int MSG_TOKEN_LIST_READY = 1200;
@@ -65,12 +82,16 @@ public class MainActivity extends AppCompatActivity implements Handler.Callback 
 
     //bundle key
     public static final String MESSAGE_SUBJECT_KEY = "com.test.jangle_producer_message_subject";
+    public static final String MESSAGE_SUB_SUBJECT_KEY = "com.test.jangle_producer_sub_message_subject";
+    public static final String KEY_COMMON_DTO = "com.test.jangle_producer_common_dto";
     public static final String USER_TOKEN_LIST_KEY = "com.test.jangle_producer_token_list";
     public static final String USER_TOKEN_KEY = "com.test.jangle_producer_token";
     public static final String USER_TOKEN_KEY2 = "com.test.jangle_producer_token2";
     public static final String JANGLE_KEY = "com.test.jangle_producer_jangle";
+    public static final String JANGLE_OWNER_KEY = "com.test.jangle_producer_jangle_owner";
     public static final String COMPLETION_COUNT_KEY = "com.test.jangle_producer_completion_count";
     public static final String FILE_LIST_KEY = "com.test.jangle_producer_file_list";
+
 
     private TestService mService;
     private AppExecutors mAppExecutors;
@@ -93,7 +114,7 @@ public class MainActivity extends AppCompatActivity implements Handler.Callback 
     private int mCompletionCounter = 1;
     private int mUserCounter = 1;
     private int mUsernameSuf = USERNAME_SUFFIX;
-    private boolean islogHttp = true;
+    private boolean islogHttp = false;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -118,7 +139,7 @@ public class MainActivity extends AppCompatActivity implements Handler.Callback 
     //1- create
     public void addUsers(View view) {
         DebugLog.write();
-        createUser(6);
+        createUser(1000);
     }
 
     //2- hide account
@@ -155,20 +176,20 @@ public class MainActivity extends AppCompatActivity implements Handler.Callback 
     //6-vote all others
     public void voteAllOthers(View view) {
         DebugLog.write();
-        //votingOtherUser();
+        // votingOtherUser();
         votingFollowingUser();
     }
 
     public void updateProfileName(View view) {
-        DebugLog.write();
+        DebugLog.write("updateProfileName : " + Thread.currentThread().getName());
         UpdateUserProfile updateUserProfile = new UpdateUserProfile(mService, mAppExecutors);
-        updateUserProfile.updateProfileName(1000, "testuser");
+        updateUserProfile.updateProfileName(1, "testuser");
     }
 
 
     //-update username
     public void uploadProfileImage(View view) {
-        DebugLog.write();
+        DebugLog.write("uploadProfileImage : " + Thread.currentThread().getName());
         uploadUserProfileImage();
 
     }
@@ -179,12 +200,12 @@ public class MainActivity extends AppCompatActivity implements Handler.Callback 
     }
 
     public void sendCompLastJangle(View view) {
-        sendCompletionsToLastJangle(50);
+        sendCompletionsToLastJangle(55);
     }
 
     public void sendCompLastJangleGivenUsers(View view) {
-        String[] userArray = {"testuser2", "testuser3", "testuser1003", "testuser1004"};
-        sendCompletionGivenJangleWithUser( new ArrayList<String>(Arrays.asList(userArray)), 5);
+        String[] userArray = {"testuser1", "testuser4", "testuser1001", "testuser1002", "testuser2", "testuser3", "testuser1003", "testuser1004"};
+        sendCompletionGivenJangleWithUser(new ArrayList<String>(Arrays.asList(userArray)), 5);
     }
     //endregion
 
@@ -214,6 +235,7 @@ public class MainActivity extends AppCompatActivity implements Handler.Callback 
             }
             case MSG_UPLOAD_IMAGE_FILES_READY: {
                 DebugLog.write("username-suf=" + mUsernameSuf);
+                DebugLog.write("MSG_UPLOAD_IMAGE_FILES_READY  : " + Thread.currentThread().getName());
                 Bundle bundle = msg.getData();
                 String token = bundle.getString(USER_TOKEN_KEY);
                 uploadImageProfile(mJangleFile[0], mJangleFile[1], token);
@@ -222,10 +244,12 @@ public class MainActivity extends AppCompatActivity implements Handler.Callback 
             case MSG_JANGLE_AND_COMPLETIONS_FILES_READY: {
                 DebugLog.write("username-suf=" + mUsernameSuf);
                 Bundle bundle = msg.getData();
+                //add subject
+                /*
                 String token1 = bundle.getString(USER_TOKEN_KEY);
                 String token2 = bundle.getString(USER_TOKEN_KEY2);
                 uploadJangleAndCompletions(mJangleFile[0], mJangleFile[1], mJangleFile2[0], mJangleFile2[1], mJangleFile3[0],
-                        mJangleFile3[1], token1, token2);
+                        mJangleFile3[1], token1, token2);*/
                 break;
             }
             case MSG_LAST_JANGLE: {
@@ -237,9 +261,10 @@ public class MainActivity extends AppCompatActivity implements Handler.Callback 
                 MessageSubject subject = (MessageSubject) bundle.getSerializable(MESSAGE_SUBJECT_KEY);
                 if (subject == MessageSubject.UPLOAD_COMPLETIONS_TO_LAST_JANGLE) {
                     DebugLog.write();
-                    ArrayList<Bitmap[]> bitmapList = mAssetBitmapGenerator.getScaledBitmapList(completionCount);
+                    ArrayList<Bitmap[]> bitmapList = mAssetBitmapGenerator.getScaledBitmapList(BitmapImageType.DEF_JANGLE_IMAGE, completionCount);
                     try {
-                        new SaveBitmapCompletionFileRunnable(mFileConverter, bitmapList, this, tokenList, jangleUuid).run();
+                        Runnable run = new SaveBitmapCompletionFileRunnable(mFileConverter, bitmapList, this, tokenList, jangleUuid);
+                        mAppExecutors.diskIO().execute(run);
                     } catch (Exception e) {
                         DebugLog.write();
                     }
@@ -253,8 +278,6 @@ public class MainActivity extends AppCompatActivity implements Handler.Callback 
                 ArrayList<String> tokenList = bundle.getStringArrayList(USER_TOKEN_LIST_KEY);
                 ArrayList<File[]> fileList = (ArrayList<File[]>) bundle.getSerializable(FILE_LIST_KEY);
                 uploadCompletionsToLastJangle(1, jangleUuid, tokenList, fileList);
-
-
                 break;
             }
             //endregion
@@ -275,7 +298,6 @@ public class MainActivity extends AppCompatActivity implements Handler.Callback 
             case MSG_USER_OTHER_VOTES_COMPLETED: {
                 DebugLog.write("username-suf=" + mUsernameSuf);
                 if (mUsernameSuf < USER_LIMIT) {
-
                     mUserToken.getToken(++mUsernameSuf, Constants.PROFILE_BASE_NAME, MessageSubject.VOTE_COMPLETION_OTHERS);
                 }
                 break;
@@ -311,14 +333,15 @@ public class MainActivity extends AppCompatActivity implements Handler.Callback 
             case MSG_TOKEN_LIST_READY: {
                 DebugLog.write();
                 Bundle bundle = msg.getData();
-                int completionCount = bundle.getInt(COMPLETION_COUNT_KEY);
-                ArrayList<String> tokenList = bundle.getStringArrayList(USER_TOKEN_LIST_KEY);
+
                 MessageSubject subject = (MessageSubject) bundle.getSerializable(MESSAGE_SUBJECT_KEY);
                 if (subject == MessageSubject.UPLOAD_COMPLETIONS_TO_LAST_JANGLE) {
                     DebugLog.write();
+                    int completionCount = bundle.getInt(COMPLETION_COUNT_KEY);
+                    ArrayList<String> tokenList = bundle.getStringArrayList(USER_TOKEN_LIST_KEY);
                     mHandleJangle.getLastJangle(tokenList, completionCount, subject);
                 } else if (subject == MessageSubject.UPLOAD_COMPLETIONS_TO_LAST_JANGLE_WITH_USERS) {
-                String jangleUuid= bundle.getString(JANGLE_KEY);
+                    String jangleUuid = bundle.getString(JANGLE_KEY);
 
                 }
                 break;
@@ -329,26 +352,29 @@ public class MainActivity extends AppCompatActivity implements Handler.Callback 
                 String token1 = bundle.getString(USER_TOKEN_KEY);
                 String token2 = bundle.getString(USER_TOKEN_KEY2);
                 try {
-                    Bitmap[] bitmaps1 = mAssetBitmapGenerator.getScaledBitmap();
-                    Bitmap[] bitmaps2 = mAssetBitmapGenerator.getScaledBitmap();
-                    Bitmap[] bitmaps3 = mAssetBitmapGenerator.getScaledBitmap();
-                    new SaveB3itmapToFileRunnable(mFileConverter, bitmaps1, bitmaps2, bitmaps3, this::handleMessage, token1,
-                            token2).run();
+                    Bitmap[] bitmaps1 = mAssetBitmapGenerator.getScaledBitmap(BitmapImageType.DEF_JANGLE_IMAGE);
+                    Bitmap[] bitmaps2 = mAssetBitmapGenerator.getScaledBitmap(BitmapImageType.DEF_JANGLE_IMAGE);
+                    Bitmap[] bitmaps3 = mAssetBitmapGenerator.getScaledBitmap(BitmapImageType.DEF_JANGLE_IMAGE);
+                    Runnable runnableBitmap = new SaveB3itmapToFileRunnable(mFileConverter, bitmaps1, bitmaps2, bitmaps3, this::handleMessage, token1,
+                            token2);
+                    mAppExecutors.diskIO().execute(runnableBitmap);
                 } catch (Exception e) {
                     DebugLog.write(e.getMessage());
                 }
                 break;
             }
             case MSG_TOKEN_READY: {
-                DebugLog.write();
+                DebugLog.write("MSG TOKEN READY  : " + Thread.currentThread().getName());
                 Bundle bundle = msg.getData();
                 String token = bundle.getString(USER_TOKEN_KEY);
                 MessageSubject subject = (MessageSubject) bundle.getSerializable(MESSAGE_SUBJECT_KEY);
                 switch (subject) {
                     case UPLOAD_IMAGE: {
                         try {
-                            Bitmap[] bitmaps = mAssetBitmapGenerator.getScaledBitmap();
-                            new SaveBitmapToFileRunnable(mFileConverter, bitmaps, this::handleMessage, DocType.UPLOAD_IMAGE, token).run();
+                            Bitmap[] bitmaps = mAssetBitmapGenerator.getScaledBitmap(BitmapImageType.AVATAR);
+                            Runnable runUploadImage = new SaveBitmapToFileRunnable(mFileConverter, bitmaps, this::handleMessage,
+                                    DocType.UPLOAD_IMAGE, token);
+                            mAppExecutors.diskIO().execute(runUploadImage);
                         } catch (Exception e) {
                             DebugLog.write(e.getMessage());
                         }
@@ -357,8 +383,10 @@ public class MainActivity extends AppCompatActivity implements Handler.Callback 
                     case UPLOAD_JANGLE: {
                         try {
                             // Bitmap[] bitmaps = mRandomBitmapGenerator.genResourcedBitmap();
-                            Bitmap[] bitmaps = mAssetBitmapGenerator.getScaledBitmap();
-                            new SaveBitmapToFileRunnable(mFileConverter, bitmaps, this::handleMessage, DocType.JANGLE, token).run();
+                            Bitmap[] bitmaps = mAssetBitmapGenerator.getScaledBitmap(BitmapImageType.DEF_JANGLE_IMAGE);
+                            Runnable runnableBitmap = new SaveBitmapToFileRunnable(mFileConverter, bitmaps, this::handleMessage, DocType.JANGLE,
+                                    token);
+                            mAppExecutors.diskIO().execute(runnableBitmap);
                         } catch (Exception e) {
                             DebugLog.write(e.getMessage());
                         }
@@ -390,10 +418,10 @@ public class MainActivity extends AppCompatActivity implements Handler.Callback 
     //region METHODS
     void createUser(final int i) {
         mAppExecutors.networkIO().execute(() -> {
-            Call<AuthResponse> call = mService.register(new RegisterModel("zindex" + i));
+            Call<AuthResponse> call = mService.register(new RegisterModel("testuser" + i));
             try {
                 Response<AuthResponse> response = call.execute();
-                if (response.body() != null && response.body().getToken() != null && i < 10) {
+                if (response.body() != null && response.body().getToken() != null && i < 1101) {
                     createUser(i + 1);
                 }
             } catch (IOException e) {
@@ -433,7 +461,7 @@ public class MainActivity extends AppCompatActivity implements Handler.Callback 
                 MessageSubject.UPLOAD_COMPLETIONS_TO_LAST_JANGLE);
     }
 
-    public void sendCompletionGivenJangleWithUser( ArrayList<String> completenioners, int completionCount) {
+    public void sendCompletionGivenJangleWithUser(ArrayList<String> completenioners, int completionCount) {
         DebugLog.write();
         mUserToken.getTokenList(completenioners, completionCount,
                 MessageSubject.UPLOAD_COMPLETIONS_TO_LAST_JANGLE_WITH_USERS);
@@ -457,13 +485,14 @@ public class MainActivity extends AppCompatActivity implements Handler.Callback 
     //region UPLOAD
     public void uploadImageProfile(File image, File thumbnail, String token) {
         MultipartBody.Part fileImage = MultipartBody.Part
-                .createFormData("file", "prob.jpg", RequestBody.create(parse("multipart/form-data"), image));
+                .createFormData("file", "pro_big.jpg", RequestBody.create(parse("multipart/form-data"), image));
         MultipartBody.Part fileThumbnail = MultipartBody.Part
-                .createFormData("thumbnail", "sml.jpg", RequestBody.create(parse("multipart/form-data"), thumbnail));
+                .createFormData("thumbnail", "pro_sml.jpg", RequestBody.create(parse("multipart/form-data"), thumbnail));
 
         Map<String, String> authMap = new HashMap<>();
         authMap.put(Constants.AUTHORIZATION, Constants.BEARER + token);
         mAppExecutors.networkIO().execute(() -> {
+            DebugLog.write("uploadImageProfile networkIO : " + Thread.currentThread().getName());
             Call<Void> call2 = mService.uploadImage(fileImage, fileThumbnail, authMap);
             try {
                 Response<Void> response = call2.execute();
@@ -556,11 +585,11 @@ public class MainActivity extends AppCompatActivity implements Handler.Callback 
             });
         } else {
             DebugLog.write();
-            /*
+
             if (mUsernameSuf < USER_LIMIT) {
                 ++mUsernameSuf;
-                sendCompletionsToLastJangle(10);
-            }*/
+                sendCompletionsToLastJangle(15);
+            }
         }
     }
 
@@ -640,6 +669,43 @@ public class MainActivity extends AppCompatActivity implements Handler.Callback 
 
     //region RUNNABLE
 
+    class LooperThread extends Thread {
+        public Handler mHandler;
+
+        public void run() {
+            Looper.prepare();
+
+            mHandler = new Handler() {
+                public void handleMessage(Message msg) {
+                    // process incoming messages here
+                    // this will run in non-ui/background thread
+                }
+            };
+
+            Looper.loop();
+        }
+    }
+
+    private class MyHandlerThread extends HandlerThread {
+
+        Handler handler;
+
+        public MyHandlerThread(String name) {
+            super(name);
+        }
+
+        @Override
+        protected void onLooperPrepared() {
+            handler = new Handler(getLooper()) {
+                @Override
+                public void handleMessage(Message msg) {
+                    // process incoming messages here
+                    // this will run in non-ui/background thread
+                }
+            };
+        }
+    }
+
     private class SaveBitmapToFileRunnable implements Runnable {
 
         private FileConverter mFileConverter;
@@ -660,7 +726,7 @@ public class MainActivity extends AppCompatActivity implements Handler.Callback 
 
         @Override
         public void run() {
-            DebugLog.write();
+            DebugLog.write("SaveBitmapToFileRunnable  : " + Thread.currentThread().getName());
             mJangleFile = mFileConverter.convertBitmapToFiles(bitmaps[0], bitmaps[1]);
             Message msg = Message.obtain();
             Bundle bundle = new Bundle();
@@ -752,6 +818,13 @@ public class MainActivity extends AppCompatActivity implements Handler.Callback 
     }
     //endregion
 
+    //navigation
+    public void navigateScreenTwo(View view) {
+        DebugLog.write();
+        Intent intent = new Intent(MainActivity.this, ScreenTwoActivity.class);
+        startActivity(intent);
+
+    }
 
 }
 

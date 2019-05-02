@@ -7,9 +7,12 @@ import android.os.Message;
 import com.test.jangleproducer.AppExecutors;
 import com.test.jangleproducer.Constants;
 import com.test.jangleproducer.DebugLog;
-import com.test.jangleproducer.MainActivity;
+import com.test.jangleproducer.activity.MainActivity;
 import com.test.jangleproducer.MessageSubject;
 import com.test.jangleproducer.TestService;
+import com.test.jangleproducer.activity.ScreenTwoActivity;
+import com.test.jangleproducer.model.CommonDto;
+import com.test.jangleproducer.model.dispatch.UuidModel;
 import com.test.jangleproducer.model.result.del.Datum;
 import com.test.jangleproducer.model.result.del.JangleInfo;
 
@@ -18,17 +21,20 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
 
+import androidx.appcompat.app.AppCompatActivity;
 import retrofit2.Call;
 import retrofit2.Response;
 
-import static com.test.jangleproducer.MainActivity.COMPLETION_COUNT_KEY;
-import static com.test.jangleproducer.MainActivity.JANGLE_KEY;
-import static com.test.jangleproducer.MainActivity.MESSAGE_SUBJECT_KEY;
-import static com.test.jangleproducer.MainActivity.MSG_DEL_JANGLE_COMPLETED;
-import static com.test.jangleproducer.MainActivity.MSG_DEL_NEXT_JANGLE;
-import static com.test.jangleproducer.MainActivity.MSG_LAST_JANGLE;
-import static com.test.jangleproducer.MainActivity.USER_TOKEN_KEY;
-import static com.test.jangleproducer.MainActivity.USER_TOKEN_LIST_KEY;
+import static com.test.jangleproducer.activity.MainActivity.COMPLETION_COUNT_KEY;
+import static com.test.jangleproducer.activity.MainActivity.JANGLE_KEY;
+import static com.test.jangleproducer.activity.MainActivity.KEY_COMMON_DTO;
+import static com.test.jangleproducer.activity.MainActivity.MESSAGE_SUBJECT_KEY;
+import static com.test.jangleproducer.activity.MainActivity.MSG_DEL_JANGLE_COMPLETED;
+import static com.test.jangleproducer.activity.MainActivity.MSG_DEL_NEXT_JANGLE;
+import static com.test.jangleproducer.activity.MainActivity.MSG_LAST_JANGLE;
+import static com.test.jangleproducer.activity.MainActivity.MSG_LIKED_JANGLE;
+import static com.test.jangleproducer.activity.MainActivity.USER_TOKEN_KEY;
+import static com.test.jangleproducer.activity.MainActivity.USER_TOKEN_LIST_KEY;
 
 public class HandleJangle {
 
@@ -37,10 +43,16 @@ public class HandleJangle {
     private AppExecutors mAppExecutors;
     private Handler.Callback callback;
 
-    public HandleJangle(TestService testService, AppExecutors appExecutors, MainActivity activity) {
+    public HandleJangle(TestService testService, AppExecutors appExecutors, AppCompatActivity activity) {
         this.mTestService = testService;
         this.mAppExecutors = appExecutors;
-        this.callback = activity;
+        if (activity instanceof MainActivity) {
+            this.callback = (MainActivity) activity;
+        } else if (activity instanceof ScreenTwoActivity) {
+            this.callback = (ScreenTwoActivity) activity;
+        } else {
+            throw new IllegalArgumentException("Wrong HandleJangle Activity");
+        }
 
     }
 
@@ -104,5 +116,41 @@ public class HandleJangle {
         });
     }
 
+
+    public void likeJangle(CommonDto commonDto, int likeCount, MessageSubject subject) {
+
+        if (likeCount > 0) {
+            int userIndex = likeCount - 1;
+            String likeUserToken = commonDto.getUsersToken().get(userIndex);
+            Map<String, String> authMap = new HashMap<>();
+            authMap.put(Constants.AUTHORIZATION, Constants.BEARER + likeUserToken);
+            mAppExecutors.networkIO().execute(() -> {
+                DebugLog.write("LIKED USER TOKEN= "+authMap.get(Constants.AUTHORIZATION));
+                DebugLog.write("jangle UUID= "+commonDto.getJangleUuid());
+                Call<Void> call = mTestService.likeJangle(new UuidModel(commonDto.getJangleUuid()), authMap);
+                try {
+                    Response<Void> response = call.execute();
+                    if (response.code() == 200) {
+                        likeJangle(commonDto, likeCount - 1, subject);
+                    }
+                    else{
+                        DebugLog.write(response.code()+" "+response.errorBody());
+                    }
+
+                } catch (IOException r) {
+                }
+            });
+        } else {
+            DebugLog.write();
+            Message msg = Message.obtain();
+            msg.what = MSG_LIKED_JANGLE;
+            Bundle bundle = new Bundle();
+            bundle.putSerializable(MESSAGE_SUBJECT_KEY, subject);
+            bundle.putSerializable(KEY_COMMON_DTO, commonDto);
+            msg.setData(bundle);
+            callback.handleMessage(msg);
+        }
+
+    }
 
 }

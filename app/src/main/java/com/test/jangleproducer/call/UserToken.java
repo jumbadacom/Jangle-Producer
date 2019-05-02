@@ -7,27 +7,27 @@ import android.os.Message;
 
 import com.test.jangleproducer.AppExecutors;
 import com.test.jangleproducer.DebugLog;
-import com.test.jangleproducer.MainActivity;
+import com.test.jangleproducer.activity.MainActivity;
 import com.test.jangleproducer.MessageSubject;
 import com.test.jangleproducer.TestService;
+import com.test.jangleproducer.activity.ScreenTwoActivity;
 import com.test.jangleproducer.model.dispatch.AuthModel;
 import com.test.jangleproducer.model.result.AuthResponse;
 
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.List;
 
+import androidx.appcompat.app.AppCompatActivity;
 import retrofit2.Call;
 import retrofit2.Response;
 
-import static com.test.jangleproducer.MainActivity.COMPLETION_COUNT_KEY;
-import static com.test.jangleproducer.MainActivity.JANGLE_KEY;
-import static com.test.jangleproducer.MainActivity.MSG_DOUBLE_TOKEN_READY;
-import static com.test.jangleproducer.MainActivity.MSG_TOKEN_READY;
-import static com.test.jangleproducer.MainActivity.MESSAGE_SUBJECT_KEY;
-import static com.test.jangleproducer.MainActivity.USER_TOKEN_KEY;
-import static com.test.jangleproducer.MainActivity.USER_TOKEN_KEY2;
-import static com.test.jangleproducer.MainActivity.USER_TOKEN_LIST_KEY;
+import static com.test.jangleproducer.activity.MainActivity.COMPLETION_COUNT_KEY;
+import static com.test.jangleproducer.activity.MainActivity.MSG_DOUBLE_TOKEN_READY;
+import static com.test.jangleproducer.activity.MainActivity.MSG_TOKEN_READY;
+import static com.test.jangleproducer.activity.MainActivity.MESSAGE_SUBJECT_KEY;
+import static com.test.jangleproducer.activity.MainActivity.USER_TOKEN_KEY;
+import static com.test.jangleproducer.activity.MainActivity.USER_TOKEN_KEY2;
+import static com.test.jangleproducer.activity.MainActivity.USER_TOKEN_LIST_KEY;
 
 public class UserToken {
 
@@ -38,10 +38,17 @@ public class UserToken {
     private AppExecutors mAppExecutors;
 
 
-    public UserToken(TestService testService, AppExecutors appExecutors, MainActivity activity) {
+    public UserToken(TestService testService, AppExecutors appExecutors, AppCompatActivity activity) {
         this.mAppExecutors = appExecutors;
         this.mTestService = testService;
-        this.callback = activity;
+        if (activity instanceof MainActivity){
+            this.callback =(MainActivity) activity;
+        }else if(activity instanceof ScreenTwoActivity){
+            this.callback = (ScreenTwoActivity)activity;
+        }else{
+            throw new IllegalArgumentException("Wrong UserToken Activity");
+        }
+
     }
 
     public void getToken(int userId, final String userBaseName, final MessageSubject messageSubject) {
@@ -52,7 +59,10 @@ public class UserToken {
             try {
                 Response<AuthResponse> response = call.execute();
                 if (response.isSuccessful() && response.body() != null && response.body().getToken() != null) {
+                    DebugLog.write("isSuccessful networkIO: " + Thread.currentThread().getName());
                     mAppExecutors.mainThread().execute(() -> {
+                        //todo add looper this line
+                        DebugLog.write("? diskIO : " + Thread.currentThread().getName());
                         Message msg = Message.obtain();
                         Bundle bundle = new Bundle();
                         bundle.putString(USER_TOKEN_KEY, response.body().getToken());
@@ -155,6 +165,34 @@ public class UserToken {
             bundle.putStringArrayList(USER_TOKEN_LIST_KEY, mTokenList);
             bundle.putSerializable(MESSAGE_SUBJECT_KEY, messageSubject);
             msg.what = MainActivity.MSG_TOKEN_LIST_READY;
+            msg.setData(bundle);
+            callback.handleMessage(msg);
+        }
+    }
+    public void getTokenList(final ArrayList<String> userNames, final MessageSubject messageSubject, int what) {
+
+        if (userNames.size() > 0) {
+            mAppExecutors.networkIO().execute(() -> {
+                Call<AuthResponse> call = mTestService.authenticate(new AuthModel(userNames.get(0), userNames.get(0)));
+                try {
+                    DebugLog.write("isSuccessful networkIO: " + Thread.currentThread().getName());
+                    Response<AuthResponse> response = call.execute();
+                    if (response.isSuccessful() && response.body() != null && response.body().getToken() != null) {
+                        userNames.remove(0);
+                        userNames.trimToSize();
+                        mTokenList.add(response.body().getToken());
+                        getTokenList( userNames,    messageSubject,what);
+                    }
+                } catch (IOException e) {
+                    DebugLog.write(e.getMessage());
+                }
+            });
+        } else {
+            Message msg = Message.obtain();
+            Bundle bundle = new Bundle();
+            bundle.putStringArrayList(USER_TOKEN_LIST_KEY, mTokenList);
+            bundle.putSerializable(MESSAGE_SUBJECT_KEY, messageSubject);
+            msg.what = what;
             msg.setData(bundle);
             callback.handleMessage(msg);
         }

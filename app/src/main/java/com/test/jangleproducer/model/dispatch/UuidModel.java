@@ -1,9 +1,9 @@
 package com.test.jangleproducer.model.dispatch;
 
-public class UserModel {
+public class UuidModel {
     private String uuid;
 
-    public UserModel(String uuid) {
+    public UuidModel(String uuid) {
         this.uuid = uuid;
     }
 

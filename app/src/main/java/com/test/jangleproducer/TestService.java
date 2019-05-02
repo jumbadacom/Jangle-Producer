@@ -3,7 +3,7 @@ package com.test.jangleproducer;
 import com.test.jangleproducer.model.dispatch.AuthModel;
 import com.test.jangleproducer.model.dispatch.profile.HideAccountModel;
 import com.test.jangleproducer.model.dispatch.RegisterModel;
-import com.test.jangleproducer.model.dispatch.UserModel;
+import com.test.jangleproducer.model.dispatch.UuidModel;
 import com.test.jangleproducer.model.dispatch.profile.UpdateNameModel;
 import com.test.jangleproducer.model.dispatch.vote.VoteModel;
 import com.test.jangleproducer.model.result.AuthResponse;
@@ -73,7 +73,7 @@ public interface TestService {
 
     //region Inter users follow
     @POST("/social/api/follows/sendFollowingRequest")
-    Call<Void> sendFollowRequest(@Body UserModel model, @HeaderMap Map<String, String> authMap);
+    Call<Void> sendFollowRequest(@Body UuidModel model, @HeaderMap Map<String, String> authMap);
     //endregion
 
 
@@ -88,6 +88,11 @@ public interface TestService {
     @POST("/api/account/uploadProfileImage")
     Call<Void> uploadImage(@Part MultipartBody.Part file, @Part MultipartBody.Part thumbnail,
                                       @HeaderMap Map<String, String> headerMap);
+    //endregion
+
+    //like
+    @POST("/social/api/likeds")
+    Call<Void> likeJangle(@Body UuidModel model, @HeaderMap Map<String, String> authMap);
     //endregion
 
 
