@@ -15,9 +15,6 @@ public class DebugLog {
     private static boolean isDebuggable;
 
 
-    /**
-     * Writes debugging log.
-     */
 
     public static void write() {
 
