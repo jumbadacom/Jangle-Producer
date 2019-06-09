@@ -12,9 +12,11 @@ public class UserUtil {
     public static String getUsername(String baseName) {
         return baseName;
     }
+
     public static String getUsername(String baseName, int suffix) {
         return baseName + suffix;
     }
+
     public static String getPassword(String password) {
         return password;
     }
@@ -40,6 +42,27 @@ public class UserUtil {
             count--;
             int ind = tempList.size() - 1;
             String token = tempList.remove(random.nextInt(ind));
+            returnList.add(token);
+        }
+        DebugLog.write("TempList size= " + tempList.size());
+        DebugLog.write(returnList.size());
+        return returnList;
+    }
+
+    public static ArrayList<String> getRandomDuplicateTokensFromList(boolean isRandomJangleOwner, int count,
+                                                                     @NonNull final ArrayList<String> tokenList) {
+
+
+        Random random = new Random();
+        ArrayList<String> returnList = new ArrayList<>();
+        ArrayList<String> tempList = new ArrayList<>(tokenList);
+        if (!isRandomJangleOwner) {
+            count--;
+            returnList.add(tempList.get(0));//jangle owner, first token
+        }
+        while (count > 0) {
+            count--;
+            String token = tempList.get(random.nextInt(tempList.size()));
             returnList.add(token);
         }
         DebugLog.write("TempList size= " + tempList.size());

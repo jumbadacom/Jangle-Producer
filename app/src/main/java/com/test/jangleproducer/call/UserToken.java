@@ -10,6 +10,7 @@ import com.test.jangleproducer.DebugLog;
 import com.test.jangleproducer.activity.MainActivity;
 import com.test.jangleproducer.MessageSubject;
 import com.test.jangleproducer.TestService;
+import com.test.jangleproducer.activity.ScreenThreeActivity;
 import com.test.jangleproducer.activity.ScreenTwoActivity;
 import com.test.jangleproducer.model.dispatch.AuthModel;
 import com.test.jangleproducer.model.result.AuthResponse;
@@ -22,6 +23,7 @@ import retrofit2.Call;
 import retrofit2.Response;
 
 import static com.test.jangleproducer.activity.MainActivity.COMPLETION_COUNT_KEY;
+import static com.test.jangleproducer.activity.MainActivity.KEY_FILE_BUNDLE;
 import static com.test.jangleproducer.activity.MainActivity.MSG_DOUBLE_TOKEN_READY;
 import static com.test.jangleproducer.activity.MainActivity.MSG_TOKEN_READY;
 import static com.test.jangleproducer.activity.MainActivity.MESSAGE_SUBJECT_KEY;
@@ -45,7 +47,10 @@ public class UserToken {
             this.callback =(MainActivity) activity;
         }else if(activity instanceof ScreenTwoActivity){
             this.callback = (ScreenTwoActivity)activity;
-        }else{
+        } else if(activity instanceof ScreenThreeActivity){
+            this.callback = (ScreenThreeActivity)activity;
+        }
+         else{
             throw new IllegalArgumentException("Wrong UserToken Activity");
         }
 
@@ -223,6 +228,40 @@ public class UserToken {
             Bundle bundle = new Bundle();
             bundle.putStringArrayList(USER_TOKEN_LIST_KEY, mTokenList);
             bundle.putSerializable(MESSAGE_SUBJECT_KEY, messageSubject);
+            msg.what = what;
+            msg.setData(bundle);
+            callback.handleMessage(msg);
+        }
+    }
+
+    public void getTokenList(final ArrayList<String> userNames, final ArrayList<String> passwords,final MessageSubject messageSubject, int what,
+                             Bundle fileBundle) {
+
+        if (userNames.size() > 0) {
+            mAppExecutors.networkIO().execute(() -> {
+                Call<AuthResponse> call = mTestService.authenticate(new AuthModel( passwords.get(0),userNames.get(0)));
+                try {
+                    DebugLog.write("TOKEN FOR= " +passwords.get(0)+" - "+userNames.get(0));
+                    DebugLog.write("isSuccessful networkIO: " + Thread.currentThread().getName());
+                    Response<AuthResponse> response = call.execute();
+                    if (response.isSuccessful() && response.body() != null && response.body().getToken() != null) {
+                        userNames.remove(0);
+                        passwords.remove(0);
+                        userNames.trimToSize();
+                        passwords.trimToSize();
+                        mTokenList.add(response.body().getToken());
+                        getTokenList( userNames,passwords,messageSubject,what,fileBundle);
+                    }
+                } catch (IOException e) {
+                    DebugLog.write(e.getMessage());
+                }
+            });
+        } else {
+            Message msg = Message.obtain();
+            Bundle bundle = new Bundle();
+            bundle.putStringArrayList(USER_TOKEN_LIST_KEY, mTokenList);
+            bundle.putSerializable(MESSAGE_SUBJECT_KEY, messageSubject);
+            bundle.putBundle(KEY_FILE_BUNDLE,fileBundle);
             msg.what = what;
             msg.setData(bundle);
             callback.handleMessage(msg);

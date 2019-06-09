@@ -6,7 +6,9 @@ import android.os.Handler;
 import android.os.Message;
 
 import com.test.jangleproducer.activity.MainActivity;
+import com.test.jangleproducer.activity.ScreenThreeActivity;
 import com.test.jangleproducer.activity.ScreenTwoActivity;
+import com.test.jangleproducer.model.CommonDto;
 
 import java.util.ArrayList;
 import java.util.Random;
@@ -14,9 +16,9 @@ import java.util.Random;
 import androidx.appcompat.app.AppCompatActivity;
 
 import static com.test.jangleproducer.activity.MainActivity.KEY_BIG_BITMAP;
+import static com.test.jangleproducer.activity.MainActivity.KEY_COMMON_DTO;
 import static com.test.jangleproducer.activity.MainActivity.KEY_DOC_TYPE;
 import static com.test.jangleproducer.activity.MainActivity.KEY_SMALL_BITMAP;
-import static com.test.jangleproducer.activity.MainActivity.USER_TOKEN_LIST_KEY;
 
 public class AssetBitmapGenerator {
 
@@ -46,42 +48,16 @@ public class AssetBitmapGenerator {
             this.mCallback = (MainActivity) activity;
         } else if (activity instanceof ScreenTwoActivity) {
             this.mCallback = (ScreenTwoActivity) activity;
+        } else if (activity instanceof ScreenThreeActivity) {
+            this.mCallback = (ScreenThreeActivity) activity;
         } else {
             throw new IllegalArgumentException("Wrong Upload Activity");
         }
     }
 
-
-    public void getScaledBitmapMsg(@BitmapImageType int type,@DocType int docType,ArrayList<String> randomUserList) {
+    public void getScaledJangleBitmapMsg(@BitmapImageType int type) {
         mAppExecutors.diskIO().execute(() -> {
-            int randomNo;
-            String fileName;
-            int imageCountLimit;
-            switch (type) {
-                case BitmapImageType.AVATAR: {
-                    imageCountLimit = AVATAR_COUNT;
-                    randomNo = mRandom.nextInt(imageCountLimit) + 1;
-                    fileName = AVATAR_PREFIX + randomNo + ".jpg";
-                }
-                case BitmapImageType.BG: {
-                    imageCountLimit = BG_COUNT;
-                    randomNo = mRandom.nextInt(imageCountLimit) + 1;
-                    fileName = BG_PREFIX + randomNo + ".jpg";
-                }
-                case BitmapImageType.BG2: {
-                    imageCountLimit = BG_COUNT2;
-                    randomNo = mRandom.nextInt(imageCountLimit) + 1;
-                    fileName = BG2_PREFIX + randomNo + ".jpg";
-                }
-                default: {
-                    imageCountLimit = DEF_IMAGE_COUNT;
-                    randomNo = mRandom.nextInt(imageCountLimit) + 1;
-                    fileName = IMAGE_PREFIX + randomNo + ".jpg";
-                }
-            }
-
-            DebugLog.write("LOAD = " + fileName);
-            Bitmap loadBitmap = mLoadBitmap.getImageFromAssetsFile(fileName);
+            Bitmap loadBitmap = getRandomFileWithName(type);
             Bitmap scaledBitmapBig = Bitmap.createScaledBitmap(loadBitmap, 720, 720, false);
             Bitmap scaledBitmapSmall = Bitmap.createScaledBitmap(loadBitmap, 144, 144, false);
             loadBitmap.recycle();
@@ -91,55 +67,61 @@ public class AssetBitmapGenerator {
                 Bundle bundle = new Bundle();
                 bundle.putParcelable(KEY_BIG_BITMAP, scaledBitmapBig);
                 bundle.putParcelable(KEY_SMALL_BITMAP, scaledBitmapSmall);
-                bundle.putInt(KEY_DOC_TYPE,type);
-                bundle.putStringArrayList(USER_TOKEN_LIST_KEY,randomUserList);
-                message.what = MainActivity.MSG_BITMAP_IMAGE_READY;
+                message.what = MainActivity.MSG_BITMAP_JANGLE_IMAGE_READY;
                 message.setData(bundle);
                 mCallback.handleMessage(message);
             });
         });
-
     }
 
-    public Bitmap[] getScaledBitmap(@BitmapImageType int type) {
 
-            int randomNo;
-            String fileName;
-            int imageCountLimit;
-            switch (type) {
-                case BitmapImageType.AVATAR: {
-                    imageCountLimit = AVATAR_COUNT;
-                    randomNo = mRandom.nextInt(imageCountLimit) + 1;
-                    fileName = AVATAR_PREFIX + randomNo + ".jpg";
-                }
-                case BitmapImageType.BG: {
-                    imageCountLimit = BG_COUNT;
-                    randomNo = mRandom.nextInt(imageCountLimit) + 1;
-                    fileName = BG_PREFIX + randomNo + ".jpg";
-                }
-                case BitmapImageType.BG2: {
-                    imageCountLimit = BG_COUNT2;
-                    randomNo = mRandom.nextInt(imageCountLimit) + 1;
-                    fileName = BG2_PREFIX + randomNo + ".jpg";
-                }
-                default: {
-                    imageCountLimit = DEF_IMAGE_COUNT;
-                    randomNo = mRandom.nextInt(imageCountLimit) + 1;
-                    fileName = IMAGE_PREFIX + randomNo + ".jpg";
-                }
-            }
 
-            DebugLog.write("LOAD = " + fileName);
-            Bitmap loadBitmap = mLoadBitmap.getImageFromAssetsFile(fileName);
+
+    public void getScaledCompletionBitmapMsg(@BitmapImageType int type, CommonDto dto) {
+        mAppExecutors.diskIO().execute(() -> {
+            Bitmap loadBitmap = getRandomFileWithName(type);
             Bitmap scaledBitmapBig = Bitmap.createScaledBitmap(loadBitmap, 720, 720, false);
             Bitmap scaledBitmapSmall = Bitmap.createScaledBitmap(loadBitmap, 144, 144, false);
             loadBitmap.recycle();
-            return new Bitmap[]{scaledBitmapBig, scaledBitmapSmall};
+            mAppExecutors.mainThread().execute(() -> {
+                DebugLog.write();
+                Message message = new Message();
+                Bundle bundle = new Bundle();
+                bundle.putParcelable(KEY_BIG_BITMAP, scaledBitmapBig);
+                bundle.putParcelable(KEY_SMALL_BITMAP, scaledBitmapSmall);
+                bundle.putSerializable(KEY_COMMON_DTO, dto);
+                message.what = MainActivity.MSG_BITMAP_COMPLETION_IMAGE_READY;
+                message.setData(bundle);
+                mCallback.handleMessage(message);
+            });
+        });
+    }
 
+    public Bitmap[] getScaledBitmap(@BitmapImageType int type) {
+        Bitmap loadBitmap = getRandomFileWithName(type);
+        Bitmap scaledBitmapBig = Bitmap.createScaledBitmap(loadBitmap, 720, 720, false);
+        Bitmap scaledBitmapSmall = Bitmap.createScaledBitmap(loadBitmap, 144, 144, false);
+        loadBitmap.recycle();
+        return new Bitmap[]{scaledBitmapBig, scaledBitmapSmall};
     }
 
     public ArrayList<Bitmap[]> getScaledBitmapList(@BitmapImageType int type, int imageCount) {
         ArrayList<Bitmap[]> bitmapArrayList = new ArrayList();
+
+        int i = 0;
+        while (i < imageCount) {
+            Bitmap loadBitmap = getRandomFileWithName(type);
+            Bitmap scaledBitmapBig = Bitmap.createScaledBitmap(loadBitmap, 720, 720, false);
+            Bitmap scaledBitmapSmall = Bitmap.createScaledBitmap(loadBitmap, 144, 144, false);
+            loadBitmap.recycle();
+            bitmapArrayList.add(new Bitmap[]{scaledBitmapBig, scaledBitmapSmall});
+            i++;
+        }
+        return bitmapArrayList;
+    }
+
+
+    private Bitmap getRandomFileWithName(@BitmapImageType int type) {
         int randomNo;
         String fileName;
         int imageCountLimit;
@@ -165,15 +147,9 @@ public class AssetBitmapGenerator {
                 fileName = IMAGE_PREFIX + randomNo + ".jpg";
             }
         }
-        int i = 0;
-        while (i < imageCount) {
-            Bitmap loadBitmap = mLoadBitmap.getImageFromAssetsFile(fileName);
-            Bitmap scaledBitmapBig = Bitmap.createScaledBitmap(loadBitmap, 720, 720, false);
-            Bitmap scaledBitmapSmall = Bitmap.createScaledBitmap(loadBitmap, 144, 144, false);
-            loadBitmap.recycle();
-            bitmapArrayList.add(new Bitmap[]{scaledBitmapBig, scaledBitmapSmall});
-            i++;
-        }
-        return bitmapArrayList;
+        DebugLog.write(fileName);
+        return mLoadBitmap.getImageFromAssetsFile(fileName);
     }
+
+
 }

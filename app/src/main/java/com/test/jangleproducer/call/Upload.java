@@ -1,22 +1,20 @@
 package com.test.jangleproducer.call;
 
-import android.graphics.Bitmap;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Message;
 
 import com.google.gson.Gson;
 import com.test.jangleproducer.AppExecutors;
-import com.test.jangleproducer.AssetBitmapGenerator;
-import com.test.jangleproducer.BitmapImageType;
 import com.test.jangleproducer.Constants;
 import com.test.jangleproducer.DebugLog;
-import com.test.jangleproducer.FileConverter;
 import com.test.jangleproducer.MessageSubject;
 import com.test.jangleproducer.RandomWordGenerator;
 import com.test.jangleproducer.TestService;
 import com.test.jangleproducer.activity.MainActivity;
+import com.test.jangleproducer.activity.ScreenThreeActivity;
 import com.test.jangleproducer.activity.ScreenTwoActivity;
+import com.test.jangleproducer.model.CommonDto;
 import com.test.jangleproducer.model.dispatch.DocType;
 import com.test.jangleproducer.model.dispatch.UploadVM;
 import com.test.jangleproducer.model.result.UploadResponse;
@@ -35,7 +33,7 @@ import retrofit2.Response;
 
 import static com.test.jangleproducer.activity.MainActivity.JANGLE_KEY;
 import static com.test.jangleproducer.activity.MainActivity.JANGLE_OWNER_KEY;
-import static com.test.jangleproducer.activity.MainActivity.KEY_HAS_COMPLETIONS;
+import static com.test.jangleproducer.activity.MainActivity.KEY_COMMON_DTO;
 import static com.test.jangleproducer.activity.MainActivity.MESSAGE_SUBJECT_KEY;
 import static com.test.jangleproducer.activity.MainActivity.USER_TOKEN_LIST_KEY;
 import static okhttp3.MediaType.parse;
@@ -62,17 +60,25 @@ public class Upload {
             this.callback = (MainActivity) activity;
         } else if (activity instanceof ScreenTwoActivity) {
             this.callback = (ScreenTwoActivity) activity;
+        } else if (activity instanceof ScreenThreeActivity) {
+            this.callback = (ScreenThreeActivity) activity;
         } else {
             throw new IllegalArgumentException("Wrong Upload Activity");
         }
     }
 
-    public void uploadJangleWithFile(boolean hasCompletion, int completionCount,File[] files, ArrayList<String> tokenList) {
+    public void uploadJangleWithFile(boolean isRandomUser, boolean hasCompletion, int completionCount, File[] files, ArrayList<String> tokenList) {
         //get random user to upload a jangle
-        int tokenListIndex = tokenList.size() - 1;
-        int userIndex = mRandom.nextInt(tokenListIndex);
-        String jangleOwnerToken = tokenList.remove(userIndex);
-        tokenList.trimToSize();
+        String jangleOwnerToken;
+        if (isRandomUser) {
+            int tokenListIndex = tokenList.size() - 1;
+            int userIndex = mRandom.nextInt(tokenListIndex);
+            jangleOwnerToken = tokenList.remove(userIndex);
+            tokenList.trimToSize();
+        } else {
+            jangleOwnerToken = tokenList.remove(0);
+            tokenList.trimToSize();
+        }
         //get jangle file
         //prepare jangle model
         UploadVM model = new UploadVM(mRandomWordGenerator.getWord(), DocType.JANGLE);
@@ -94,12 +100,17 @@ public class Upload {
                         DebugLog.write();
                         Message message = new Message();
                         Bundle bundle = new Bundle();
-                        bundle.putBoolean(KEY_HAS_COMPLETIONS, hasCompletion);
-                        bundle.putString(JANGLE_KEY, response.body().getUuid());
-                        bundle.putString(JANGLE_OWNER_KEY, jangleOwnerToken);
-                        bundle.putStringArrayList(USER_TOKEN_LIST_KEY, tokenList);
+                        CommonDto dto = new CommonDto();
+                        dto.setJangleUuid(response.body().getUuid());
+                        dto.setOwnerToken(jangleOwnerToken);
+                        dto.setUsersToken(tokenList);
+                        if (hasCompletion) {
+                            dto.setCompletionCountOfTheJangle(completionCount);
+                            dto.setJangleHasCompletion(hasCompletion);
+                            dto.setUploadCompletionCounter(1);
+                        }
+                        bundle.putSerializable(KEY_COMMON_DTO, dto);
                         message.what = MainActivity.MSG_UPLOAD_JANGLE_READY;
-                        message.arg2=completionCount;
                         message.setData(bundle);
                         callback.handleMessage(message);
                     });
@@ -108,30 +119,30 @@ public class Upload {
             } catch (Exception e) {
                 DebugLog.write();
             }
-
         });
 
     }
 
-    public void uploadCompletionWithFile(int counter, int completionCount, File[] files, String jangleOwnerToken, String jangleUuid,
-                                             ArrayList<String> compTokenList,
-                                             MessageSubject subject) {
-
-        while (completionCount > 0) {
-            int tokenListIndex = compTokenList.size() - 1;
+    public void uploadCompletionWithFile(int completionCount, File[] files, CommonDto dto) {
+        if (completionCount > 0) {
+            int tokenListIndex = dto.getUsersToken().size() - 1;
             int userIndex = mRandom.nextInt(tokenListIndex);
-            String compOwnerToken = compTokenList.get(userIndex);
+            String compOwnerToken = dto.getUsersToken().get(userIndex);
             //prepare jangle model
-            UploadVM uploadModel = new UploadVM(mRandomWordGenerator.getWord(), DocType.COMPLETION, jangleUuid, counter);
+            UploadVM uploadModel = new UploadVM(mRandomWordGenerator.getWord(), DocType.COMPLETION, dto.getJangleUuid(),
+                    dto.getUploadCompletionCounter());
             RequestBody modelBody = RequestBody.create(parse("application/json"), mGson.toJson(uploadModel));
             MultipartBody.Part fileImage = MultipartBody.Part
-                    .createFormData("file", counter + "_bg.jpg", RequestBody.create(parse("multipart/form-data"), files[0]));
+                    .createFormData("file", dto.getUploadCompletionCounter() + "_bg.jpg", RequestBody.create(parse("multipart/form-data"), files[0]));
             MultipartBody.Part imageUrl = MultipartBody.Part
-                    .createFormData("preview", counter + "_bg.jpg", RequestBody.create(parse("multipart/form-data"), files[0]));
+                    .createFormData("preview", dto.getUploadCompletionCounter() + "_bg.jpg", RequestBody.create(parse("multipart/form-data"),
+                            files[0]));
             MultipartBody.Part fileThumbnail = MultipartBody.Part
-                    .createFormData("thumbnail", counter + "_sml.jpg", RequestBody.create(parse("multipart/form-data"), files[1]));
-            mAppExecutor.networkIO().execute(() -> {
-
+                    .createFormData("thumbnail", dto.getUploadCompletionCounter() + "_sml.jpg", RequestBody.create(parse("multipart/form-data"),
+                            files[1]));
+            mAppExecutor.diskIO().execute(() -> {
+                DebugLog.write("UploadCompletionWithFile networkIO " + Thread.currentThread().getName());
+                // DebugLog.write("CompOwnerToken=" + compOwnerToken);
                 Map<String, String> authMapComp = new HashMap<>();
                 authMapComp.put(Constants.AUTHORIZATION, Constants.BEARER + compOwnerToken);
                 Call<UploadResponse> call2 = mService.uploadJangle(modelBody, fileImage, imageUrl, fileThumbnail,
@@ -139,43 +150,94 @@ public class Upload {
                 try {
                     Response<UploadResponse> response = call2.execute();
                     if (response.code() == 200) {
-                        mAppExecutor.mainThread().execute(() -> {
-                            DebugLog.write();
-                            Message message = new Message();
-                            Bundle bundle = new Bundle();
-                            bundle.putString(JANGLE_KEY, jangleUuid);
-                            bundle.putString(JANGLE_OWNER_KEY, jangleOwnerToken);
-                            bundle.putStringArrayList(USER_TOKEN_LIST_KEY, compTokenList);
-                            bundle.putSerializable(MESSAGE_SUBJECT_KEY, subject);
-                            message.what = MainActivity.MSG_UPLOAD_COMPLETION_READY;
-                            message.arg1=counter;
-                            message.arg2=completionCount;
-                            message.setData(bundle);
-                            callback.handleMessage(message);
-                        });
-
+                        DebugLog.write();
+                        Message message = new Message();
+                        Bundle bundle = new Bundle();
+                        dto.setUploadCompletionCounter(dto.getUploadCompletionCounter() + 1);
+                        dto.setCompletionCountOfTheJangle(dto.getCompletionCountOfTheJangle() - 1);
+                        DebugLog.write("COMMON DTO= " + dto.toString());
+                        bundle.putSerializable(KEY_COMMON_DTO, dto);
+                        message.what = MainActivity.MSG_UPLOAD_COMPLETION_UPLOADING_CONTINUE;
+                        message.setData(bundle);
+                        callback.handleMessage(message);
                     }
+
                 } catch (Exception e) {
                     DebugLog.write();
                 }
             });
 
-
+        } else {
+            //completions are completed
+            mAppExecutor.mainThread().execute(() -> {
+                DebugLog.write();
+                Message message = new Message();
+                Bundle bundle = new Bundle();
+                bundle.putSerializable(KEY_COMMON_DTO, dto);
+                message.what = MainActivity.MSG_UPLOAD_COMPLETION_READY;
+                message.setData(bundle);
+                callback.handleMessage(message);
+            });
         }
-        //completions are completed
-        mAppExecutor.mainThread().execute(() -> {
-            DebugLog.write();
-            Message message = new Message();
-            Bundle bundle = new Bundle();
-            bundle.putString(JANGLE_KEY, jangleUuid);
-            bundle.putString(JANGLE_OWNER_KEY, jangleOwnerToken);
-            bundle.putStringArrayList(USER_TOKEN_LIST_KEY, compTokenList);
-            bundle.putSerializable(MESSAGE_SUBJECT_KEY, subject);
-            message.what = MainActivity.MSG_JANGLE_AND_COMPLETIONS_FILES_READY;
-            message.setData(bundle);
-            callback.handleMessage(message);
-        });
 
+    }
+
+    public void uploadCompletionMixSequenceWithFile(int completionCount, File[] files, CommonDto dto) {
+        if (completionCount > 0) {
+            int tokenListIndex = dto.getUsersToken().size() - 1;
+            int userIndex = mRandom.nextInt(tokenListIndex);
+            String compOwnerToken = dto.getUsersToken().get(userIndex);
+            //prepare jangle model
+            UploadVM uploadModel = new UploadVM(mRandomWordGenerator.getWord(), DocType.COMPLETION, dto.getJangleUuid(),
+                    dto.getUploadCompletionCounter());
+            RequestBody modelBody = RequestBody.create(parse("application/json"), mGson.toJson(uploadModel));
+            MultipartBody.Part fileImage = MultipartBody.Part
+                    .createFormData("file", dto.getUploadCompletionCounter() + "_bg.jpg", RequestBody.create(parse("multipart/form-data"), files[0]));
+            MultipartBody.Part imageUrl = MultipartBody.Part
+                    .createFormData("preview", dto.getUploadCompletionCounter() + "_bg.jpg", RequestBody.create(parse("multipart/form-data"),
+                            files[0]));
+            MultipartBody.Part fileThumbnail = MultipartBody.Part
+                    .createFormData("thumbnail", dto.getUploadCompletionCounter() + "_sml.jpg", RequestBody.create(parse("multipart/form-data"),
+                            files[1]));
+            mAppExecutor.networkIO().execute(() -> {
+                DebugLog.write("UploadCompletionWithFile networkIO " + Thread.currentThread().getName());
+                // DebugLog.write("CompOwnerToken=" + compOwnerToken);
+                Map<String, String> authMapComp = new HashMap<>();
+                authMapComp.put(Constants.AUTHORIZATION, Constants.BEARER + compOwnerToken);
+                Call<UploadResponse> call2 = mService.uploadJangle(modelBody, fileImage, imageUrl, fileThumbnail,
+                        authMapComp);
+                try {
+                    Response<UploadResponse> response = call2.execute();
+                    if (response.code() == 200) {
+                        DebugLog.write();
+                        Message message = new Message();
+                        Bundle bundle = new Bundle();
+                        dto.setUploadCompletionCounter(dto.getUploadCompletionCounter() + 1);
+                        dto.setCompletionCountOfTheJangle(dto.getCompletionCountOfTheJangle() - 1);
+                        DebugLog.write("COMMON DTO= " + dto.toString());
+                        bundle.putSerializable(KEY_COMMON_DTO, dto);
+                        message.what = MainActivity.MSG_UPLOAD_COMPLETION_UPLOADING_CONTINUE;
+                        message.setData(bundle);
+                        callback.handleMessage(message);
+                    }
+
+                } catch (Exception e) {
+                    DebugLog.write();
+                }
+            });
+
+        } else {
+            //completions are completed
+            mAppExecutor.mainThread().execute(() -> {
+                DebugLog.write();
+                Message message = new Message();
+                Bundle bundle = new Bundle();
+                bundle.putSerializable(KEY_COMMON_DTO, dto);
+                message.what = MainActivity.MSG_UPLOAD_COMPLETION_READY;
+                message.setData(bundle);
+                callback.handleMessage(message);
+            });
+        }
 
     }
 
@@ -223,6 +285,7 @@ public class Upload {
             DebugLog.write("COMPLETION FILE COUNT= " + fileList.size());
             File[] files = fileList.remove(fileList.size() - 1);
             fileList.trimToSize();
+            DebugLog.write("file name= " + files[1].getName());
             UploadVM uploadModel = new UploadVM(mRandomWordGenerator.getWord(), DocType.COMPLETION, jangleUuid, counter);
             RequestBody modelBody = RequestBody.create(parse("application/json"), mGson.toJson(uploadModel));
             MultipartBody.Part fileImage = MultipartBody.Part

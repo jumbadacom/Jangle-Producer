@@ -30,6 +30,7 @@ import com.test.jangleproducer.RandomBitmapGenerator;
 import com.test.jangleproducer.RandomColorGenerator;
 import com.test.jangleproducer.RandomWordGenerator;
 import com.test.jangleproducer.TestService;
+import com.test.jangleproducer.Uuid;
 import com.test.jangleproducer.call.HandleJangle;
 import com.test.jangleproducer.call.InterUsersFollow;
 import com.test.jangleproducer.call.UpdateUserProfile;
@@ -39,6 +40,7 @@ import com.test.jangleproducer.model.dispatch.DocType;
 import com.test.jangleproducer.model.dispatch.RegisterModel;
 import com.test.jangleproducer.model.dispatch.UploadVM;
 import com.test.jangleproducer.model.result.AuthResponse;
+import com.test.jangleproducer.model.result.UUID;
 import com.test.jangleproducer.model.result.UploadResponse;
 
 import java.io.File;
@@ -57,8 +59,10 @@ import retrofit2.Response;
 public class MainActivity extends AppCompatActivity implements Handler.Callback {
 
     //bitmap
-    public static final int MSG_BITMAP_IMAGE_READY =7000;
-    public static final int MSG_BITMAP_FILE_READY=7001;
+    public static final int MSG_BITMAP_JANGLE_IMAGE_READY =7000;
+    public static final int MSG_BITMAP_COMPLETION_IMAGE_READY =7001;
+    public static final int MSG_BITMAP_JANGLE_FILE_READY =7100;
+    public static final int MSG_BITMAP_COMPLETION_FILE_READY =7101;
 
     //files
     public static final int MSG_JANGLE_AND_COMPLETIONS_FILES_READY = 1110;
@@ -77,8 +81,12 @@ public class MainActivity extends AppCompatActivity implements Handler.Callback 
     public static final int MSG_DEL_NEXT_JANGLE = 2602;
     public static final int MSG_LAST_JANGLE = 2603;
     public static final int MSG_LIKED_JANGLE = 2604;
-    public static final int MSG_UPLOAD_JANGLE_READY = 2605;
-    public static final int MSG_UPLOAD_COMPLETION_READY = 2606;
+    public static final int MSG_UPLOAD_JANGLE_STARTING = 2605;
+    public static final int MSG_UPLOAD_COMPLETION_STARTING = 2606;
+    public static final int MSG_UPLOAD_JANGLE_UPLOADING_CONTINUE = 2607;
+    public static final int MSG_UPLOAD_COMPLETION_UPLOADING_CONTINUE = 2608;
+    public static final int MSG_UPLOAD_JANGLE_READY = 2609;
+    public static final int MSG_UPLOAD_COMPLETION_READY = 2610;
 
     //tokens
     public static final int MSG_TOKEN_LIST_READY = 1200;
@@ -102,6 +110,7 @@ public class MainActivity extends AppCompatActivity implements Handler.Callback 
     public static final String KEY_SMALL_FILE = "com.test.jangle_producer_small_file";
     public static final String KEY_DOC_TYPE = "com.test.jangle_producer_doc_type";
     public static final String KEY_HAS_COMPLETIONS ="com.test.jangle_producer_jangle_has_completions";
+    public static final String KEY_FILE_BUNDLE= "com.test.jangle_producer_jangle_file_bundle";
 
 
     private TestService mService;
@@ -125,7 +134,7 @@ public class MainActivity extends AppCompatActivity implements Handler.Callback 
     private int mCompletionCounter = 1;
     private int mUserCounter = 1;
     private int mUsernameSuf = USERNAME_SUFFIX;
-    private boolean islogHttp = false;
+    private boolean islogHttp = true;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -164,9 +173,10 @@ public class MainActivity extends AppCompatActivity implements Handler.Callback 
     public void addFollowRequest(View view) {
         DebugLog.write();
         InterUsersFollow interUsersFollow = new InterUsersFollow(mAppExecutors, mService);
-        interUsersFollow.runInterUserFollow();
-        //interUsersFollow.sendFollowRequestToUser(1);
+       // interUsersFollow.runInterUserFollow();
+      interUsersFollow.sendFollowRequestFromUser(102,70, Uuid.TESTUSER100);
     }
+
 
     //4- add a jangle
     public void addJangle(View view) {
@@ -542,7 +552,7 @@ public class MainActivity extends AppCompatActivity implements Handler.Callback 
                     mLastJangleUuid = response2.body().getUuid();
                     if (mUsernameSuf < USER_LIMIT) {
                         addJangleForUsers();
-                        mUsernameSuf++;
+                      //  mUsernameSuf++;
                     } else {
 
                     }
@@ -817,7 +827,6 @@ public class MainActivity extends AppCompatActivity implements Handler.Callback 
             mJangleFile2 = mFileConverter.convertBitmapToFiles(bitmaps2[0], bitmaps2[1]);
             mJangleFile3 = mFileConverter.convertBitmapToFiles(bitmaps3[0], bitmaps3[1]);
 
-
             Message msg = Message.obtain();
             Bundle bundle = new Bundle();
             bundle.putString(USER_TOKEN_KEY, mToken1);
@@ -833,6 +842,13 @@ public class MainActivity extends AppCompatActivity implements Handler.Callback 
     public void navigateScreenTwo(View view) {
         DebugLog.write();
         Intent intent = new Intent(MainActivity.this, ScreenTwoActivity.class);
+        startActivity(intent);
+
+    }
+
+    public void navigateScreenThree(View view) {
+        DebugLog.write();
+        Intent intent = new Intent(MainActivity.this, ScreenThreeActivity.class);
         startActivity(intent);
 
     }

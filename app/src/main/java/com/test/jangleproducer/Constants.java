@@ -14,5 +14,5 @@ public interface Constants {
 
     String PROFILE_BASE_NAME = "testuser";
     int USER_LIMIT = 60;
-    int USERNAME_SUFFIX = 1;
+    int USERNAME_SUFFIX = 100;
 }

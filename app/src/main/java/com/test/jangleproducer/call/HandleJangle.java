@@ -10,6 +10,7 @@ import com.test.jangleproducer.DebugLog;
 import com.test.jangleproducer.activity.MainActivity;
 import com.test.jangleproducer.MessageSubject;
 import com.test.jangleproducer.TestService;
+import com.test.jangleproducer.activity.ScreenThreeActivity;
 import com.test.jangleproducer.activity.ScreenTwoActivity;
 import com.test.jangleproducer.model.CommonDto;
 import com.test.jangleproducer.model.dispatch.UuidModel;
@@ -50,7 +51,9 @@ public class HandleJangle {
             this.callback = (MainActivity) activity;
         } else if (activity instanceof ScreenTwoActivity) {
             this.callback = (ScreenTwoActivity) activity;
-        } else {
+        } else if (activity instanceof ScreenThreeActivity) {
+            this.callback = (ScreenThreeActivity) activity;
+        }else {
             throw new IllegalArgumentException("Wrong HandleJangle Activity");
         }
 

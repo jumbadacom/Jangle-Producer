@@ -10,6 +10,7 @@ import com.test.jangleproducer.DebugLog;
 import com.test.jangleproducer.activity.MainActivity;
 import com.test.jangleproducer.MessageSubject;
 import com.test.jangleproducer.TestService;
+import com.test.jangleproducer.activity.ScreenThreeActivity;
 import com.test.jangleproducer.activity.ScreenTwoActivity;
 import com.test.jangleproducer.model.dispatch.vote.VoteModel;
 import com.test.jangleproducer.model.result.vote.Datum;
@@ -46,6 +47,8 @@ public class VoteCompletions {
             this.callback = (MainActivity) activity;
         } else if (activity instanceof ScreenTwoActivity) {
             this.callback = (ScreenTwoActivity) activity;
+        } else if (activity instanceof ScreenThreeActivity) {
+            this.callback = (ScreenThreeActivity) activity;
         } else {
             throw new IllegalArgumentException("Wrong VoteCompletions Activity");
         }
