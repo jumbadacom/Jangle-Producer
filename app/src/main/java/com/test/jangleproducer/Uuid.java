@@ -14,4 +14,5 @@ public interface Uuid {
     String TESTUSER35 = "3258621c-cd54-4860-98e5-a97e991cc933";
 
     String TESTUSER100 = "73fc0c56-c748-4db4-9aa9-51326e13f06d";
+    String TESTUSER200 = "05e6c26b-5b22-48d5-b11a-e3fe0f4fc69a";
 }

@@ -59,10 +59,10 @@ import retrofit2.Response;
 public class MainActivity extends AppCompatActivity implements Handler.Callback {
 
     //bitmap
-    public static final int MSG_BITMAP_JANGLE_IMAGE_READY =7000;
-    public static final int MSG_BITMAP_COMPLETION_IMAGE_READY =7001;
-    public static final int MSG_BITMAP_JANGLE_FILE_READY =7100;
-    public static final int MSG_BITMAP_COMPLETION_FILE_READY =7101;
+    public static final int MSG_BITMAP_JANGLE_IMAGE_READY = 7000;
+    public static final int MSG_BITMAP_COMPLETION_IMAGE_READY = 7001;
+    public static final int MSG_BITMAP_JANGLE_FILE_READY = 7100;
+    public static final int MSG_BITMAP_COMPLETION_FILE_READY = 7101;
 
     //files
     public static final int MSG_JANGLE_AND_COMPLETIONS_FILES_READY = 1110;
@@ -109,8 +109,8 @@ public class MainActivity extends AppCompatActivity implements Handler.Callback 
     public static final String KEY_BIG_FILE = "com.test.jangle_producer_big_file";
     public static final String KEY_SMALL_FILE = "com.test.jangle_producer_small_file";
     public static final String KEY_DOC_TYPE = "com.test.jangle_producer_doc_type";
-    public static final String KEY_HAS_COMPLETIONS ="com.test.jangle_producer_jangle_has_completions";
-    public static final String KEY_FILE_BUNDLE= "com.test.jangle_producer_jangle_file_bundle";
+    public static final String KEY_HAS_COMPLETIONS = "com.test.jangle_producer_jangle_has_completions";
+    public static final String KEY_FILE_BUNDLE = "com.test.jangle_producer_jangle_file_bundle";
 
 
     private TestService mService;
@@ -139,10 +139,11 @@ public class MainActivity extends AppCompatActivity implements Handler.Callback 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        DebugLog.write();
         setContentView(R.layout.activity_main);
         mService = NetworkConnection.get(islogHttp);
         mAppExecutors = new AppExecutors();
-        mAssetBitmapGenerator = new AssetBitmapGenerator(this,mAppExecutors);
+        mAssetBitmapGenerator = new AssetBitmapGenerator(this, mAppExecutors);
         mFileConverter = new FileConverter(mAppExecutors, this);
         mRandomColorGenerator = new RandomColorGenerator();
         mRandomWordGenerator = new RandomWordGenerator();
@@ -159,7 +160,7 @@ public class MainActivity extends AppCompatActivity implements Handler.Callback 
     //1- create
     public void addUsers(View view) {
         DebugLog.write();
-        createUser(1000);
+        createUser(200);
     }
 
     //2- hide account
@@ -173,8 +174,10 @@ public class MainActivity extends AppCompatActivity implements Handler.Callback 
     public void addFollowRequest(View view) {
         DebugLog.write();
         InterUsersFollow interUsersFollow = new InterUsersFollow(mAppExecutors, mService);
-       // interUsersFollow.runInterUserFollow();
-      interUsersFollow.sendFollowRequestFromUser(102,70, Uuid.TESTUSER100);
+        // interUsersFollow.runInterUserFollow();
+        //  interUsersFollow.sendFollowRequestFromUser(201,100, Uuid.TESTUSER200);
+        // interUsersFollow.userFollowOthers("testuser200", 204, 300);
+        interUsersFollow.followTheUser("testuser200", 204, 300);
     }
 
 
@@ -442,7 +445,7 @@ public class MainActivity extends AppCompatActivity implements Handler.Callback 
             Call<AuthResponse> call = mService.register(new RegisterModel("testuser" + i));
             try {
                 Response<AuthResponse> response = call.execute();
-                if (response.body() != null && response.body().getToken() != null && i < 1101) {
+                if (response.body() != null && response.body().getToken() != null && i < 301) {
                     createUser(i + 1);
                 }
             } catch (IOException e) {
@@ -552,7 +555,7 @@ public class MainActivity extends AppCompatActivity implements Handler.Callback 
                     mLastJangleUuid = response2.body().getUuid();
                     if (mUsernameSuf < USER_LIMIT) {
                         addJangleForUsers();
-                      //  mUsernameSuf++;
+                        //  mUsernameSuf++;
                     } else {
 
                     }

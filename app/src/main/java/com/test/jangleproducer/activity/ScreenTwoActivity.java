@@ -93,6 +93,7 @@ public class ScreenTwoActivity extends AppCompatActivity implements Handler.Call
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        DebugLog.write();
         setContentView(R.layout.activity_screen_two);
         mTextView = (AppCompatTextView) findViewById(R.id.txtAddJangleCompletionsVotesLikes);
         mService = NetworkConnection.get(false);

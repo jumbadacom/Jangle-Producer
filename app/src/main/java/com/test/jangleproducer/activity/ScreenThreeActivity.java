@@ -110,6 +110,7 @@ public class ScreenThreeActivity extends AppCompatActivity implements Handler.Ca
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        DebugLog.write();
         setContentView(R.layout.activity_screen_three);
         mService = NetworkConnection.get(false);
         mAppExecutors = new AppExecutors();
