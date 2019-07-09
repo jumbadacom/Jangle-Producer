@@ -175,18 +175,16 @@ public class MainActivity extends AppCompatActivity implements Handler.Callback 
         DebugLog.write();
         InterUsersFollow interUsersFollow = new InterUsersFollow(mAppExecutors, mService);
         // interUsersFollow.runInterUserFollow();
-        //  interUsersFollow.sendFollowRequestFromUser(201,100, Uuid.TESTUSER200);
+        // interUsersFollow.sendFollowRequestFromUser(201,100, Uuid.TESTUSER200);
         // interUsersFollow.userFollowOthers("testuser200", 204, 300);
         interUsersFollow.followTheUser("testuser300", 201, 299);
     }
-
 
     //4- add a jangle
     public void addJangle(View view) {
         DebugLog.write();
         addJangleForUsers();
     }
-
 
     //5- add completions
     public void addCompletion(View view) {
@@ -210,12 +208,10 @@ public class MainActivity extends AppCompatActivity implements Handler.Callback 
         updateUserProfile.updateProfileName(1, "testuser");
     }
 
-
     //-update username
     public void uploadProfileImage(View view) {
         DebugLog.write("uploadProfileImage : " + Thread.currentThread().getName());
         uploadUserProfileImage();
-
     }
 
     public void deleteJangle(View view) {
@@ -224,7 +220,7 @@ public class MainActivity extends AppCompatActivity implements Handler.Callback 
     }
 
     public void sendCompLastJangle(View view) {
-        sendCompletionsToLastJangle(55);
+        sendCompletionsToLastJangle(75);
     }
 
     public void sendCompLastJangleGivenUsers(View view) {
@@ -232,7 +228,6 @@ public class MainActivity extends AppCompatActivity implements Handler.Callback 
         sendCompletionGivenJangleWithUser(new ArrayList<String>(Arrays.asList(userArray)), 5);
     }
     //endregion
-
 
     //region CALLBACK MESSAGES
     @Override
@@ -357,7 +352,6 @@ public class MainActivity extends AppCompatActivity implements Handler.Callback 
             case MSG_TOKEN_LIST_READY: {
                 DebugLog.write();
                 Bundle bundle = msg.getData();
-
                 MessageSubject subject = (MessageSubject) bundle.getSerializable(MESSAGE_SUBJECT_KEY);
                 if (subject == MessageSubject.UPLOAD_COMPLETIONS_TO_LAST_JANGLE) {
                     DebugLog.write();
@@ -481,7 +475,7 @@ public class MainActivity extends AppCompatActivity implements Handler.Callback 
 
     public void sendCompletionsToLastJangle(int completionCount) {
         DebugLog.write();
-        mUserToken.getTokenList(mUsernameSuf, Constants.PROFILE_BASE_NAME, USER_LIMIT, completionCount,
+        mUserToken.getTokenList(mUsernameSuf, Constants.PROFILE_BASE_NAME, USERNAME_SUFFIX+USER_LIMIT, completionCount,
                 MessageSubject.UPLOAD_COMPLETIONS_TO_LAST_JANGLE);
     }
 
@@ -523,7 +517,6 @@ public class MainActivity extends AppCompatActivity implements Handler.Callback 
                 if (response.isSuccessful()) {
                     if (mUsernameSuf < USER_LIMIT) {
                         uploadUserProfileImage();
-
                         mUsernameSuf++;
                     }
                 }

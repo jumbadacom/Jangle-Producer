@@ -65,7 +65,7 @@ public class InterUsersFollow {
     }*/
 
 
-    public  void followTheUser(String username, int lowerRange, int maxRange) {
+    public void followTheUser(String username, int lowerRange, int maxRange) {
         getToken(username, lowerRange, maxRange, OTHERS_FOLLOW_THE_USER);
     }
 
