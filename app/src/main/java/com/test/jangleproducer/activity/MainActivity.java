@@ -177,7 +177,7 @@ public class MainActivity extends AppCompatActivity implements Handler.Callback 
         // interUsersFollow.runInterUserFollow();
         //  interUsersFollow.sendFollowRequestFromUser(201,100, Uuid.TESTUSER200);
         // interUsersFollow.userFollowOthers("testuser200", 204, 300);
-        interUsersFollow.followTheUser("testuser200", 204, 300);
+        interUsersFollow.followTheUser("testuser300", 201, 299);
     }
 
 
